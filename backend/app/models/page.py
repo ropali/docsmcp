@@ -4,8 +4,8 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String, Text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy.dialects.postgresql import ENUM, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.settings import settings
@@ -35,7 +35,12 @@ class Page(Base):
     file_path: Mapped[str | None] = mapped_column(Text, nullable=True)
     content_hash: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     status: Mapped[PageStatus] = mapped_column(
-        Enum(PageStatus, name="page_status_enum"),
+        ENUM(
+            PageStatus,
+            name="page_status_enum",
+            schema=settings.POSTGRES_SCHEMA,
+            create_type=False,
+        ),
         nullable=False,
         default=PageStatus.PENDING,
         server_default=PageStatus.PENDING.value,

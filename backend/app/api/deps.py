@@ -1,3 +1,4 @@
+from app.respositories import SourceRepository
 from collections.abc import AsyncGenerator
 from typing import Annotated
 
@@ -22,3 +23,10 @@ async def get_pg_connection(request: Request) -> AsyncGenerator[AsyncSession]:
 
 # RedisConnectionDep = Annotated[redis.Redis, Depends(get_redis_connection)]
 DBSessionDep = Annotated[AsyncSession, Depends(get_pg_connection)]
+
+
+def get_source_repo(session: DBSessionDep) -> SourceRepository:
+    return SourceRepository(session)
+
+
+SourceRepoDep = Annotated[SourceRepository, Depends(get_source_repo)]

@@ -4,8 +4,8 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import DateTime, ForeignKey, Integer, String
+from sqlalchemy.dialects.postgresql import ENUM, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.settings import settings
@@ -31,7 +31,12 @@ class CrawlJob(Base):
     )
     celery_task_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     status: Mapped[JobStatus] = mapped_column(
-        Enum(JobStatus, name="job_status_enum"),
+        ENUM(
+            JobStatus,
+            name="job_status_enum",
+            schema=settings.POSTGRES_SCHEMA,
+            create_type=False,
+        ),
         nullable=False,
         default=JobStatus.QUEUED,
         server_default=JobStatus.QUEUED.value,
