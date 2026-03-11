@@ -35,6 +35,12 @@ make backend run
 make backend build
 ```
 
+`make backend run` starts the FastAPI dev server with reload:
+
+```bash
+make backend run BACKEND_HOST=0.0.0.0 BACKEND_PORT=8080
+```
+
 `mcp` and `worker` support the same actions:
 
 ```bash

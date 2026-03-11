@@ -9,10 +9,14 @@ from loguru import logger
 
 from app.api.exceptions import validation_exception_handler
 from app.api.main import api_router
-from app.core.config import settings
+from app.core.settings import settings
 from app.core.events import shutdown_db_clients, startup_db_clients
 from app.core.logging import set_logger
-# from app.metrics import setup_metrics
+
+# try:
+#     from app.metrics import setup_metrics
+# except ImportError:
+#     setup_metrics = None
 
 
 @asynccontextmanager
@@ -39,8 +43,9 @@ def get_application() -> FastAPI:
 
     app.include_router(api_router)
 
-    setup_metrics(app, metrics_endpoint=False, metrics_port=8001)
-
+    # if setup_metrics is not None:
+    #     setup_metrics(app, metrics_endpoint=False, metrics_port=8001)
+    #
     if settings.CORS_ORIGINS:
         app.add_middleware(
             CORSMiddleware,

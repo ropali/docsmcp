@@ -2,6 +2,8 @@ SHELL := /bin/bash
 
 UV ?= uv
 UV_CACHE_DIR ?= /tmp/uv-cache
+BACKEND_HOST ?= 127.0.0.1
+BACKEND_PORT ?= 8000
 
 SERVICES := backend mcp worker
 
@@ -21,6 +23,7 @@ help:
 	@echo "  make backend run"
 	@echo "  make backend build"
 	@echo "  make backend sync"
+	@echo "  make backend run BACKEND_HOST=0.0.0.0 BACKEND_PORT=8080"
 	@echo ""
 	@echo "Supported services: backend, mcp, worker"
 	@echo ""
@@ -59,8 +62,12 @@ service-cmd:
 	    [ "$$#" -gt 0 ] || { echo "Usage: make $$service add-dev <dep...>"; exit 1; }; \
 	    UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) add --package "$$pkg" --dev "$$@" ;; \
 	  run) \
-	    cmd="$$service"; [ "$$service" = "mcp" ] && cmd="mcp-server"; \
-	    UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) run --package "$$pkg" "$$cmd" ;; \
+	    if [ "$$service" = "backend" ]; then \
+	      UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) run --package "$$pkg" uvicorn app.main:app --reload --host "$(BACKEND_HOST)" --port "$(BACKEND_PORT)"; \
+	    else \
+	      cmd="$$service"; [ "$$service" = "mcp" ] && cmd="mcp-server"; \
+	      UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) run --package "$$pkg" "$$cmd"; \
+	    fi ;; \
 	  build) \
 	    UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) build --package "$$pkg" ;; \
 	  sync) \
@@ -83,7 +90,7 @@ backend-add-dev:
 	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) add --package backend --dev $(DEPS)
 
 backend-run:
-	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) run --package backend backend
+	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) run --package backend uvicorn app.main:app --reload --host "$(BACKEND_HOST)" --port "$(BACKEND_PORT)"
 
 backend-build:
 	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) build --package backend
