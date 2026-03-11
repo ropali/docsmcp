@@ -9,7 +9,7 @@ SERVICES := backend mcp worker
 
 .PHONY: help \
 	backend mcp worker \
-	backend-add backend-add-dev backend-run backend-build backend-sync \
+	backend-add backend-add-dev backend-run backend-build backend-sync backend-migrate backend-downgrade backend-revision backend-db-check \
 	mcp-add mcp-add-dev mcp-run mcp-build mcp-sync \
 	worker-add worker-add-dev worker-run worker-build worker-sync \
 	build-all sync-all lock clean-dist
@@ -23,6 +23,10 @@ help:
 	@echo "  make backend run"
 	@echo "  make backend build"
 	@echo "  make backend sync"
+	@echo "  make backend migrate"
+	@echo "  make backend revision \"create users table\""
+	@echo "  make backend downgrade"
+	@echo "  make backend db-check"
 	@echo "  make backend run BACKEND_HOST=0.0.0.0 BACKEND_PORT=8080"
 	@echo ""
 	@echo "Supported services: backend, mcp, worker"
@@ -72,11 +76,25 @@ service-cmd:
 	    UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) build --package "$$pkg" ;; \
 	  sync) \
 	    UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) sync --package "$$pkg" ;; \
+	  migrate) \
+	    [ "$$service" = "backend" ] || { echo "Action '$$action' is only supported for backend"; exit 1; }; \
+	    UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) run --package backend alembic -c backend/alembic.ini upgrade head ;; \
+	  downgrade) \
+	    [ "$$service" = "backend" ] || { echo "Action '$$action' is only supported for backend"; exit 1; }; \
+	    UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) run --package backend alembic -c backend/alembic.ini downgrade -1 ;; \
+	  db-check) \
+	    [ "$$service" = "backend" ] || { echo "Action '$$action' is only supported for backend"; exit 1; }; \
+	    UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) run --package backend python backend/scripts/db_check.py ;; \
+	  revision) \
+	    [ "$$service" = "backend" ] || { echo "Action '$$action' is only supported for backend"; exit 1; }; \
+	    [ "$$#" -gt 0 ] || { echo "Usage: make backend revision \"message\""; exit 1; }; \
+	    msg="$$(printf "%s " "$$@" | sed 's/[[:space:]]*$$//')"; \
+	    UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) run --package backend alembic -c backend/alembic.ini revision --autogenerate -m "$$msg" ;; \
 	  help) \
 	    $(MAKE) help --no-print-directory ;; \
 	  *) \
 	    echo "Unsupported action: $$action"; \
-	    echo "Supported: add, add-dev, run, build, sync"; \
+	    echo "Supported: add, add-dev, run, build, sync, migrate, revision, downgrade"; \
 	    exit 1 ;; \
 	esac
 
@@ -97,6 +115,19 @@ backend-build:
 
 backend-sync:
 	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) sync --package backend
+
+backend-migrate:
+	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) run --package backend alembic -c backend/alembic.ini upgrade head
+
+backend-downgrade:
+	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) run --package backend alembic -c backend/alembic.ini downgrade -1
+
+backend-db-check:
+	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) run --package backend python backend/scripts/db_check.py
+
+backend-revision:
+	@test -n "$(MSG)" || (echo "Usage: make backend-revision MSG='create users table'"; exit 1)
+	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) run --package backend alembic -c backend/alembic.ini revision --autogenerate -m "$(MSG)"
 
 mcp-add:
 	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) add --package mcp-server $(DEPS)

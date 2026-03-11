@@ -55,3 +55,14 @@ make backend-add DEPS="httpx redis"
 make mcp-add-dev DEPS="pytest"
 make worker-build
 ```
+
+## Backend migrations (Alembic)
+
+Alembic is configured in `backend/alembic.ini` with scripts in `backend/migrations`.
+
+```bash
+make backend migrate
+make backend revision "create users table"
+make backend downgrade
+make backend db-check
+```

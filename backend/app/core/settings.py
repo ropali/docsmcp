@@ -33,7 +33,7 @@ class Settings(BaseSettings):
     CORS_HEADERS: list[str] = Field(default=["*"], alias="CORS_HEADERS")
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=("backend/.env", ".env"),
         case_sensitive=True,
     )
 
