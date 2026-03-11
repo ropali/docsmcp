@@ -1,0 +1,6 @@
+[tool.uv.workspace]
+members = [
+    "backend",
+    "mcp_server",
+    "worker",
+]

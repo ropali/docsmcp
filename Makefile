@@ -1,0 +1,143 @@
+SHELL := /bin/bash
+
+UV ?= uv
+UV_CACHE_DIR ?= /tmp/uv-cache
+
+SERVICES := backend mcp worker
+
+.PHONY: help \
+	backend mcp worker \
+	backend-add backend-add-dev backend-run backend-build backend-sync \
+	mcp-add mcp-add-dev mcp-run mcp-build mcp-sync \
+	worker-add worker-add-dev worker-run worker-build worker-sync \
+	build-all sync-all lock clean-dist
+
+help:
+	@echo "Workspace commands"
+	@echo ""
+	@echo "Shorthand (command-style):"
+	@echo "  make backend add <dep1> <dep2>"
+	@echo "  make backend add-dev <dep1> <dep2>"
+	@echo "  make backend run"
+	@echo "  make backend build"
+	@echo "  make backend sync"
+	@echo ""
+	@echo "Supported services: backend, mcp, worker"
+	@echo ""
+	@echo "Explicit aliases (variable-style):"
+	@echo "  make backend-add DEPS='httpx redis'"
+	@echo "  make backend-add-dev DEPS='pytest ruff'"
+	@echo ""
+	@echo "Workspace:"
+	@echo "  make build-all | make sync-all | make lock | make clean-dist"
+
+# Command-style dispatcher:
+#   make backend add dep1 dep2
+#   make mcp build
+#   make worker run
+backend mcp worker:
+	@$(MAKE) service-cmd SERVICE=$@ ARGS="$(filter-out $@,$(MAKECMDGOALS))" --no-print-directory
+
+.PHONY: service-cmd
+service-cmd:
+	@set -euo pipefail; \
+	service="$(SERVICE)"; \
+	case "$$service" in \
+	  backend) pkg="backend" ;; \
+	  mcp) pkg="mcp-server" ;; \
+	  worker) pkg="worker" ;; \
+	  *) echo "Unknown service: $$service"; exit 1 ;; \
+	esac; \
+	set -- $(ARGS); \
+	action="$${1:-help}"; \
+	if [ "$$#" -gt 0 ]; then shift; fi; \
+	case "$$action" in \
+	  add) \
+	    [ "$$#" -gt 0 ] || { echo "Usage: make $$service add <dep...>"; exit 1; }; \
+	    UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) add --package "$$pkg" "$$@" ;; \
+	  add-dev) \
+	    [ "$$#" -gt 0 ] || { echo "Usage: make $$service add-dev <dep...>"; exit 1; }; \
+	    UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) add --package "$$pkg" --dev "$$@" ;; \
+	  run) \
+	    cmd="$$service"; [ "$$service" = "mcp" ] && cmd="mcp-server"; \
+	    UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) run --package "$$pkg" "$$cmd" ;; \
+	  build) \
+	    UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) build --package "$$pkg" ;; \
+	  sync) \
+	    UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) sync --package "$$pkg" ;; \
+	  help) \
+	    $(MAKE) help --no-print-directory ;; \
+	  *) \
+	    echo "Unsupported action: $$action"; \
+	    echo "Supported: add, add-dev, run, build, sync"; \
+	    exit 1 ;; \
+	esac
+
+# Variable-style aliases:
+#   make backend-add DEPS='httpx redis'
+#   make worker-add-dev DEPS='pytest'
+backend-add:
+	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) add --package backend $(DEPS)
+
+backend-add-dev:
+	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) add --package backend --dev $(DEPS)
+
+backend-run:
+	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) run --package backend backend
+
+backend-build:
+	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) build --package backend
+
+backend-sync:
+	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) sync --package backend
+
+mcp-add:
+	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) add --package mcp-server $(DEPS)
+
+mcp-add-dev:
+	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) add --package mcp-server --dev $(DEPS)
+
+mcp-run:
+	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) run --package mcp-server mcp-server
+
+mcp-build:
+	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) build --package mcp-server
+
+mcp-sync:
+	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) sync --package mcp-server
+
+worker-add:
+	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) add --package worker $(DEPS)
+
+worker-add-dev:
+	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) add --package worker --dev $(DEPS)
+
+worker-run:
+	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) run --package worker worker
+
+worker-build:
+	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) build --package worker
+
+worker-sync:
+	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) sync --package worker
+
+build-all:
+	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) build --package backend
+	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) build --package mcp-server
+	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) build --package worker
+
+sync-all:
+	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) sync --package backend
+	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) sync --package mcp-server
+	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) sync --package worker
+
+lock:
+	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) lock
+
+clean-dist:
+	@rm -rf dist
+
+# Swallow extra goals in command-style calls:
+# make backend add dep1 dep2
+%:
+	@:

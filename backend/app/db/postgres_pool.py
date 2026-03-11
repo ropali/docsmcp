@@ -1,0 +1,21 @@
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
+
+from app.core.config import settings
+
+
+def create_engine_pg() -> AsyncEngine:
+    async_engine = create_async_engine(
+        settings.POSTGRES_DATABASE_URL,
+        pool_size=settings.PG_POOL_SIZE,
+        max_overflow=settings.PG_POOL_OVERFLOW,
+    )
+    return async_engine
+
+
+def create_session_factory(engine: AsyncEngine) -> async_sessionmaker:
+    return async_sessionmaker(bind=engine, expire_on_commit=False, class_=AsyncSession)
