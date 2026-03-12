@@ -1,3 +1,4 @@
+from app.respositories.crawl_job_repo import CrawlJobRepository
 from app.respositories import PageRepository, SourceRepository
 from collections.abc import AsyncGenerator
 from typing import Annotated
@@ -37,3 +38,10 @@ def get_page_repo(session: DBSessionDep) -> PageRepository:
 
 
 PageRepoDep = Annotated[PageRepository, Depends(get_page_repo)]
+
+
+def get_crawl_job_repo(session: DBSessionDep) -> CrawlJobRepository:
+    return CrawlJobRepository(session)
+
+
+CrawlJobRepoDep = Annotated[CrawlJobRepository, Depends(get_crawl_job_repo)]

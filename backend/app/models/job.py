@@ -22,14 +22,16 @@ class JobStatus(str, enum.Enum):
 class CrawlJob(Base):
     __tablename__ = "crawl_jobs"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
     source_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey(f"{settings.POSTGRES_SCHEMA}.sources.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
-    celery_task_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    celery_task_id: Mapped[str] = mapped_column(String(255), nullable=True)
     status: Mapped[JobStatus] = mapped_column(
         ENUM(
             JobStatus,
@@ -41,8 +43,16 @@ class CrawlJob(Base):
         default=JobStatus.QUEUED,
         server_default=JobStatus.QUEUED.value,
     )
-    pages_found: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
-    pages_done: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
-    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    triggered_by: Mapped[str] = mapped_column(String(32), nullable=False)
+    pages_found: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
+    pages_done: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
+    started_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    finished_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    triggered_by: Mapped[str] = mapped_column(String(32), nullable=True)

@@ -8,7 +8,7 @@ from fastapi import APIRouter, File, Form, HTTPException, UploadFile, status
 from app.core.settings import settings
 from app.models import SourceStatus, SourceType
 from app.schemas.generic import JSONResponse
-from app.api.deps import PageRepoDep, SourceRepoDep
+from app.api.deps import PageRepoDep, SourceRepoDep, CrawlJobRepoDep
 from app.schemas.source import SourceResponse, SourceCreate, SourceCreateResponse
 
 
@@ -37,7 +37,7 @@ async def get_all_sources(repo: SourceRepoDep) -> list[SourceResponse]:
     return [SourceResponse.model_validate(r, from_attributes=True) for r in rows]
 
 
-@source_router.get("/{id}", response_model=SourceResponse)
+@source_router.get("/{id:uuid}", response_model=SourceResponse)
 async def get_source_by_id(id: uuid.UUID, repo: SourceRepoDep) -> SourceResponse:
     source = await repo.get_by_id(source_id=id)
 
@@ -55,7 +55,7 @@ async def create_new_source(source: SourceCreate, repo: SourceRepoDep):
     )
 
 
-@source_router.post("/{id}", response_model=JSONResponse)
+@source_router.post("/{id:uuid}", response_model=JSONResponse)
 async def refresh_source_by_id(id: uuid.UUID, repo: SourceRepoDep) -> JSONResponse:
     source = await repo.get_by_id(source_id=id)
 
@@ -70,7 +70,7 @@ async def refresh_source_by_id(id: uuid.UUID, repo: SourceRepoDep) -> JSONRespon
     return JSONResponse(status=status.HTTP_404_NOT_FOUND, message="Resource not found.")
 
 
-@source_router.delete("/{id}", response_model=JSONResponse)
+@source_router.delete("/{id:uuid}", response_model=JSONResponse)
 async def delete_source_by_id(id: uuid.UUID, repo: SourceRepoDep) -> JSONResponse:
     await repo.delete(source_id=id)
 
@@ -118,6 +118,7 @@ async def upload_source_files(
     ],
     repo: SourceRepoDep,
     page_repo: PageRepoDep,
+    crawl_job_repo: CrawlJobRepoDep,
 ) -> JSONResponse:
     source = await repo.get_by_id(source_id=source_id)
     if not source:
@@ -164,8 +165,10 @@ async def upload_source_files(
     await repo.update_progress(
         source,
         page_count=source.page_count + len(uploaded_files),
-        status=SourceStatus.PENDING,
+        status=SourceStatus.PROCESSING,
     )
+
+    await crawl_job_repo.create(source_id=source.id)
 
     return JSONResponse(
         status=status.HTTP_201_CREATED,
@@ -174,7 +177,7 @@ async def upload_source_files(
     )
 
 
-@source_router.get("/sources/{id}/pages")
+@source_router.get("/{id:uuid}/pages")
 async def list_all_pages_by_source_id(id: uuid.UUID, page_repo: PageRepoDep):
     pages = await page_repo.list(source_id=id)
 
