@@ -24,6 +24,12 @@ class Settings(BaseSettings):
 
     VERSION: str = "1.0.0"
 
+    # File Upload Settings
+    FILE_UPLOAD_DIR: str = Field(
+        default="/tmp/docsmcp_uploads",
+        alias="FILE_UPLOAD_DIR",
+    )
+
     # CORS Settings
     CORS_ORIGINS: list[str] = Field(
         default=["http://localhost:3000"],

@@ -1,4 +1,4 @@
-from app.respositories import SourceRepository
+from app.respositories import PageRepository, SourceRepository
 from collections.abc import AsyncGenerator
 from typing import Annotated
 
@@ -30,3 +30,10 @@ def get_source_repo(session: DBSessionDep) -> SourceRepository:
 
 
 SourceRepoDep = Annotated[SourceRepository, Depends(get_source_repo)]
+
+
+def get_page_repo(session: DBSessionDep) -> PageRepository:
+    return PageRepository(session)
+
+
+PageRepoDep = Annotated[PageRepository, Depends(get_page_repo)]

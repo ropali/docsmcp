@@ -35,6 +35,7 @@ def get_application() -> FastAPI:
         title=settings.PROJECT_NAME,
         description=settings.PROJECT_NAME,
         version=settings.VERSION,
+        openapi_version="3.0.3",
         lifespan=lifespan,
         debug=settings.DEBUG,
         docs_url="/docs",
