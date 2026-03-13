@@ -17,6 +17,12 @@ class Settings(BaseSettings):
     PG_POOL_OVERFLOW: int = Field(default=10, alias="PG_POOL_OVERFLOW")
     POSTGRES_SCHEMA: str = Field(default="docs_mcp", alias="POSTGRES_SCHEMA")
 
+    REDIS_URL: str | None = Field(
+        default="redis://localhost:6379/0",
+        alias="REDIS_URL",
+        description="Redis connection string",
+    )
+
     # API Settings
     API_V1_PREFIX: str = "/api/v1"
     PROJECT_NAME: str = "DocsMCP"

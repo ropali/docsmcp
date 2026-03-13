@@ -45,8 +45,16 @@ async def get_source_by_id(id: uuid.UUID, repo: SourceRepoDep) -> SourceResponse
 
 
 @source_router.post("", response_model=SourceCreateResponse)
-async def create_new_source(source: SourceCreate, repo: SourceRepoDep):
-    response = await repo.create(**source.model_dump(exclude_none=True))
+async def create_new_source(
+    source: SourceCreate, repo: SourceRepoDep, crawl_job_repo: CrawlJobRepoDep
+):
+
+    response = await repo.create(
+        **source.model_dump(exclude_none=True), status=SourceStatus.CRAWLING
+    )
+
+    if response:
+        await crawl_job_repo.create(source_id=response.id)
 
     return SourceCreateResponse(
         status=status.HTTP_201_CREATED,
