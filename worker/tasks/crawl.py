@@ -1,21 +1,21 @@
 import uuid
-from app.respositories import PageRepository
-from pathlib import Path
-from utils.files import file_sha256
-from app.models import JobStatus, SourceStatus
 import argparse
 import asyncio
+from pathlib import Path
 
-from pipeline.config import CrawlConfig
-from pipeline.crawler import Crawler
-from db.session import get_db_session
+from app.models import JobStatus, SourceStatus
+from app.respositories import PageRepository
 from app.respositories.source_repo import SourceRepository
 from app.respositories.crawl_job_repo import CrawlJobRepository
 from loguru import logger
+from worker.db.session import get_db_session
+from worker.pipeline.config import CrawlConfig
+from worker.pipeline.crawler import Crawler
+from worker.utils.files import file_sha256
 
 
 try:
-    from celery_app import celery
+    from worker.celery_app import celery
 except Exception:
     celery = None
 
@@ -68,6 +68,8 @@ async def _crawl_source(task, job_id: str):
             await source_repo.update_progress(
                 source, page_count=len(result.pages), status=SourceStatus.READY
             )
+
+            await job_repo.update(crawl_job, status=JobStatus.DONE)
 
         except Exception as exc:
             logger.info(f"CrawlTask Error: {exc}")

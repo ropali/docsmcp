@@ -1,10 +1,10 @@
-# worker/celery_app.py
-from db.session import auto_close_db
 import asyncio
+
 from celery.signals import worker_process_shutdown
 from celery import Celery
 from app.core.settings import settings
 from app.core.logging import set_logger
+from worker.db.session import auto_close_db
 
 set_logger(
     log_level=settings.LOG_LEVEL,
