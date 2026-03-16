@@ -1,3 +1,4 @@
+from app.core.clients.celery import celery_client
 import hashlib
 from pathlib import Path
 import uuid
@@ -63,26 +64,34 @@ async def create_new_source(
     )
 
 
-@source_router.post("/{id:uuid}", response_model=JSONResponse)
-async def refresh_source_by_id(id: uuid.UUID, repo: SourceRepoDep) -> JSONResponse:
-    source = await repo.get_by_id(source_id=id)
-
-    if source:
-        await repo.update_progress(source, status=SourceStatus.PROCESSING)
-
-        return JSONResponse(
-            status=status.HTTP_200_OK,
-            message=f"Resource with ID {source.id} is added in the queue for processing.",
-        )
-
-    return JSONResponse(status=status.HTTP_404_NOT_FOUND, message="Resource not found.")
-
-
 @source_router.delete("/{id:uuid}", response_model=JSONResponse)
 async def delete_source_by_id(id: uuid.UUID, repo: SourceRepoDep) -> JSONResponse:
     await repo.delete(source_id=id)
 
     return JSONResponse(status=status.HTTP_200_OK, message="Record deleted.")
+
+
+@source_router.post("/{id:uuid}/refresh")
+async def refresh_source_by_id(id: uuid.UUID, repo: CrawlJobRepoDep):
+    sources = await repo.list_by_source_id(source_id=id)
+
+    if not sources:
+        return JSONResponse(
+            status=status.HTTP_404_NOT_FOUND,
+            message="Source Does not Exist",
+        )
+
+    task = celery_client.send_task(
+        "worker.tasks.crawl.crawl_source_task",
+        args=[str(sources[0].id)],
+        queue="crawl",
+    )
+
+    # TODO: Update job id of the job
+
+    return JSONResponse(
+        status=status.HTTP_200_OK, message="Re-trigger source crawling/processing"
+    )
 
 
 @source_router.post(

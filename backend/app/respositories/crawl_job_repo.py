@@ -43,9 +43,7 @@ class CrawlJobRepository:
 
     async def list_by_source_id(self, source_id: uuid.UUID) -> list[CrawlJob]:
         result = await self._session.execute(
-            select(CrawlJob)
-            .where(CrawlJob.source_id == source_id)
-            .order_by(CrawlJob.created_at.desc())
+            select(CrawlJob).where(CrawlJob.source_id == source_id)
         )
         return list(result.scalars().all())
 

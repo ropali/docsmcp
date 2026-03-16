@@ -1,3 +1,4 @@
+from app.models import Source
 from pydantic import BaseModel, field_validator
 
 
@@ -11,7 +12,7 @@ class CrawlConfig(BaseModel):
     chunk_size: int = 512
     chunk_overlap: int = 64
     refersh_interval: int | None = 5
-    js_render: bool = True
+    js_render: bool = False
     rate_limit_delay: int = 2
     request_timeout: int = 10
     user_agent: str = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36"
@@ -20,3 +21,7 @@ class CrawlConfig(BaseModel):
     @classmethod
     def normalize_base_url(cls, v: str) -> str:
         return v.rstrip("/")
+
+    @classmethod
+    def from_source(cls, source: Source) -> CrawlConfig:
+        return CrawlConfig(base_url=source.base_url, **source.config)

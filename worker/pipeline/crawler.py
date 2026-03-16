@@ -1,14 +1,22 @@
+import hmac
 import asyncio
-from billiard.connection import wait
 import time
-from urllib.parse import urlparse
-from turtle import ht
 from collections import deque
-from utils.url_utils import fetch_robots_txt, normalize_url, extract_links, is_same_domain, is_html_link, matches_patterns
-from pipeline.fetchers import BaseFetcher, FetcherFactory, HttpFetcher
-from pipeline.config import CrawlConfig
 from dataclasses import field
+from urllib.parse import urlparse
+
 from pydantic.dataclasses import dataclass
+
+from pipeline.config import CrawlConfig
+from pipeline.fetchers import BaseFetcher, FetcherFactory, HttpFetcher
+from utils.url_utils import (
+    extract_links,
+    fetch_robots_txt,
+    is_html_link,
+    is_same_domain,
+    matches_patterns,
+    normalize_url,
+)
 
 
 @dataclass
@@ -37,7 +45,6 @@ class Crawler:
         self._domain_last_fetch: dict[str, float] = {}
 
     async def discover_urls(self) -> list[str]:
-
         robots = await fetch_robots_txt(self.config.base_url, self.config.user_agent)
 
         discovered = []
@@ -68,7 +75,7 @@ class Crawler:
                 discovered.append(url)
 
                 if depth < self.config.max_depth:
-                    for child_url in self._filter_urls(extract_links(html, url))
+                    for child_url in self._filter_urls(extract_links(html, url)):
                         if child_url not in visited:
                             visited.add(child_url)
                             queue.append((child_url, depth + 1))
@@ -77,6 +84,54 @@ class Crawler:
             await fetcher.close()
 
         return discovered
+
+    async def crawl(self) -> CrawlResult:
+        """Full Crawl"""
+        robots = await fetch_robots_txt(self.config.base_url, self.config.user_agent)
+
+        result = CrawlResult()
+
+        queue: deque[tuple[str, int]] = deque()
+
+        normalized_url = normalize_url(self.config.base_url)
+
+        queue.append((normalized_url, 0))
+
+        self._visited.add(normalized_url)
+
+        try:
+            while queue and len(result.pages) < self.config.max_pages:
+                url, depth = queue.popleft()
+
+                if not robots.can_fetch(self.config.user_agent, url):
+                    result.skipped_urls.append(url)
+                    continue
+
+                # Fetch with rate limiting
+                await self._rate_limit(url)
+
+                html = await self._fetcher.fetch(url, self.config.request_timeout)
+
+                if html is None:
+                    result.failed_urls.append(url)
+                    continue
+
+                result.pages.append(CrawlPage(url, html, depth))
+
+                # Discover child links only if we haven't hit max depth
+                if depth < self.config.max_depth:
+                    child_urls = self._filter_urls(extract_links(html, url))
+
+                    for child_url in child_urls:
+                        self._visited.add(child_url)
+                        queue.append((child_url, depth + 1))
+        except Exception as e:
+            print("Exp", e)
+
+        finally:
+            await self._fetcher.close()
+
+        return result
 
     def _filter_urls(self, urls: list[str]) -> list[str]:
         """
@@ -107,7 +162,6 @@ class Crawler:
 
         return filtered
 
-    
     async def _rate_limit(self, url: str) -> None:
         domain = urlparse(url).netloc
 

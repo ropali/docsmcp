@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from typing import Any
+from typing import Any, List
 
 from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -44,7 +44,7 @@ class SourceRepository:
         offset: int = 0,
         status: SourceStatus | None = None,
         source_type: SourceType | None = None,
-    ) -> list[Source]:
+    ) -> List[Source]:
         stmt = (
             select(Source)
             .order_by(Source.created_at.desc())

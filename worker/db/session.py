@@ -22,13 +22,11 @@ async def get_db_session() -> AsyncIterator:
     async with session_factory() as session:
         try:
             yield session
-
-            session.commit()
         except Exception as e:
             print("Database Exception:", e)
-            session.rollback()
+            await session.rollback()
 
 
-async def auto_close() -> None:
+async def auto_close_db() -> None:
     engine = get_engine()
     engine.dispose()

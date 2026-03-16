@@ -23,7 +23,8 @@ class HttpFetcher(BaseFetcher):
 
     async def fetch(self, url: str, timeout: int) -> str | None:
         try:
-            response = await self._client(url, timeout=timeout)
+            response = await self._client.get(url, timeout=timeout)
+            print(response.status_code)
             response.raise_for_status()
 
             # Only process HTML response
@@ -34,7 +35,7 @@ class HttpFetcher(BaseFetcher):
 
             return response.text
         except httpx.HTTPError as e:
-            print("Worker Error: ", e)
+            print("HttpFetcher Error: ", e)
             return None
 
     async def close(self):

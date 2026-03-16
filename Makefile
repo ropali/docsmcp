@@ -11,7 +11,7 @@ SERVICES := backend mcp worker
 	backend mcp worker \
 	backend-add backend-add-dev backend-run backend-build backend-sync backend-migrate backend-downgrade backend-revision backend-db-check \
 	mcp-add mcp-add-dev mcp-run mcp-build mcp-sync \
-	worker-add worker-add-dev worker-run worker-build worker-sync \
+	worker-add worker-add-dev worker-run worker-celery worker-build worker-sync \
 	build-all sync-all lock clean-dist
 
 help:
@@ -68,6 +68,8 @@ service-cmd:
 	  run) \
 	    if [ "$$service" = "backend" ]; then \
 	      UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) run --package "$$pkg" uvicorn app.main:app --reload --host "$(BACKEND_HOST)" --port "$(BACKEND_PORT)"; \
+	    elif [ "$$service" = "worker" ]; then \
+	      UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) run --package "$$pkg" celery -A worker.celery_app:celery worker -l info -Q crawl; \
 	    else \
 	      cmd="$$service"; [ "$$service" = "mcp" ] && cmd="mcp-server"; \
 	      UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) run --package "$$pkg" "$$cmd"; \
@@ -152,6 +154,9 @@ worker-add-dev:
 
 worker-run:
 	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) run --package worker worker
+
+worker-celery:
+	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) run --package worker celery -A worker.celery_app:celery worker -l info -Q crawl
 
 worker-build:
 	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) build --package worker

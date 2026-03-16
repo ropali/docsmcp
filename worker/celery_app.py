@@ -1,4 +1,7 @@
 # worker/celery_app.py
+from db.session import auto_close_db
+import asyncio
+from celery.signals import worker_process_shutdown
 from celery import Celery
 from app.core.settings import settings
 
@@ -18,3 +21,10 @@ celery.conf.update(
         "worker.tasks.embed.*": {"queue": "embed"},
     },
 )
+
+celery.autodiscover_tasks(["worker"], related_name="tasks", force=True)
+
+
+@worker_process_shutdown.connect
+def worker_shutdown_event(*args, **kwargs):
+    asyncio.run(auto_close_db())
