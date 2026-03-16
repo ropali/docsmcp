@@ -2,8 +2,7 @@ import uuid
 from app.respositories import PageRepository
 from pathlib import Path
 from utils.files import file_sha256
-import datetime
-from app.models import JobStatus, Page, PageStatus
+from app.models import JobStatus, SourceStatus
 import argparse
 import asyncio
 
@@ -65,6 +64,10 @@ async def _crawl_source(task, job_id: str):
                 )
 
                 # TODO: Handle failed URLS
+
+            await source_repo.update_progress(
+                source, page_count=len(result.pages), status=SourceStatus.READY
+            )
 
         except Exception as exc:
             logger.info(f"CrawlTask Error: {exc}")

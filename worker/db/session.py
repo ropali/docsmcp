@@ -29,4 +29,4 @@ async def get_db_session() -> AsyncIterator:
 
 async def auto_close_db() -> None:
     engine = get_engine()
-    engine.dispose()
+    await engine.dispose()
