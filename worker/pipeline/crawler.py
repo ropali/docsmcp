@@ -1,4 +1,3 @@
-import hmac
 import asyncio
 import time
 from collections import deque
@@ -17,6 +16,8 @@ from utils.url_utils import (
     matches_patterns,
     normalize_url,
 )
+
+from loguru import logger
 
 
 @dataclass
@@ -45,6 +46,7 @@ class Crawler:
         self._domain_last_fetch: dict[str, float] = {}
 
     async def discover_urls(self) -> list[str]:
+        logger.info(f"URL discovery started from URL: {self.config.base_url}")
         robots = await fetch_robots_txt(self.config.base_url, self.config.user_agent)
 
         discovered = []
@@ -63,6 +65,8 @@ class Crawler:
             while queue and len(discovered) < self.config.max_pages:
                 url, depth = queue.popleft()
 
+                logger.info("Visiting URL: {url}")
+
                 if not robots.can_fetch(self.config.user_agent, url):
                     continue
 
@@ -70,6 +74,7 @@ class Crawler:
                 html = await fetcher.fetch(url, self.config.request_timeout)
 
                 if html is None:
+                    logger.info("HTML content not found for URL: {url}")
                     continue
 
                 discovered.append(url)
@@ -82,7 +87,7 @@ class Crawler:
 
         finally:
             await fetcher.close()
-
+        logger.info(f"Discovered {len(discovered)} URLS.")
         return discovered
 
     async def crawl(self) -> CrawlResult:
@@ -103,6 +108,8 @@ class Crawler:
             while queue and len(result.pages) < self.config.max_pages:
                 url, depth = queue.popleft()
 
+                logger.info(f"Crawling URL: {url}")
+
                 if not robots.can_fetch(self.config.user_agent, url):
                     result.skipped_urls.append(url)
                     continue
@@ -113,6 +120,7 @@ class Crawler:
                 html = await self._fetcher.fetch(url, self.config.request_timeout)
 
                 if html is None:
+                    logger.info(f"HTML content found for URL: {url}")
                     result.failed_urls.append(url)
                     continue
 
@@ -126,7 +134,8 @@ class Crawler:
                         self._visited.add(child_url)
                         queue.append((child_url, depth + 1))
         except Exception as e:
-            print("Exp", e)
+            logger.error(f"Crawler Error: {e}")
+            raise e
 
         finally:
             await self._fetcher.close()
@@ -146,13 +155,16 @@ class Crawler:
 
         for url in urls:
             if not is_same_domain(url, self.config.base_url):
+                logger.info(f"Skipping URL - Not same domain: {url}")
                 continue
 
             if not is_html_link(url):
+                logger.info(f"Skipping URL - No HTML Content: {url}")
                 continue
 
             if self.config.url_patterns:
                 if not matches_patterns(url, self.config.url_patterns):
+                    logger.info(f"Skipping URL - Pattern Not Matched: {url}")
                     continue
 
             if matches_patterns(url, self.config.exclude_patterns):

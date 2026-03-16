@@ -12,6 +12,8 @@ from pipeline.crawler import Crawler
 from db.session import get_db_session
 from app.respositories.source_repo import SourceRepository
 from app.respositories.crawl_job_repo import CrawlJobRepository
+from loguru import logger
+
 
 try:
     from celery_app import celery
@@ -31,6 +33,8 @@ async def _crawl_source(task, job_id: str):
 
         source = await source_repo.get_by_id(source_id=crawl_job.source_id)
 
+        logger.info(f"CrawlTask: Started for job ID {job_id}")
+
         # Mark job as running
         await job_repo.update(crawl_job, status=JobStatus.RUNNING)
 
@@ -42,6 +46,7 @@ async def _crawl_source(task, job_id: str):
             result = await crawler.crawl()
 
             for page in result.pages:
+                # TODO: Remove hardcoded path
                 file_path = Path("/home/ropalim/Workspace/docsmcp/uploads/") / str(
                     uuid.uuid4()
                 )
@@ -62,7 +67,9 @@ async def _crawl_source(task, job_id: str):
                 # TODO: Handle failed URLS
 
         except Exception as exc:
+            logger.info(f"CrawlTask Error: {exc}")
             if task is not None:
+                logger.info(f"CrawlTask Retry: {task}")
                 raise task.retry(exc=exc)
             raise
 

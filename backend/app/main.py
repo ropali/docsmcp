@@ -30,7 +30,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
 
 def get_application() -> FastAPI:
     """Returns a FastAPI application instance."""
-    set_logger()
+    set_logger(
+        log_level=settings.LOG_LEVEL,
+        json_logs=settings.LOG_JSON,
+        log_file_enabled=settings.LOG_FILE_ENABLED,
+        log_file_path=settings.LOG_FILE_PATH,
+        file_rotation=settings.LOG_FILE_ROTATION,
+        file_retention=settings.LOG_FILE_RETENTION,
+        file_compression=settings.LOG_FILE_COMPRESSION,
+    )
     app = FastAPI(
         title=settings.PROJECT_NAME,
         description=settings.PROJECT_NAME,

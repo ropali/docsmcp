@@ -4,6 +4,17 @@ import asyncio
 from celery.signals import worker_process_shutdown
 from celery import Celery
 from app.core.settings import settings
+from app.core.logging import set_logger
+
+set_logger(
+    log_level=settings.LOG_LEVEL,
+    json_logs=settings.LOG_JSON,
+    log_file_enabled=settings.LOG_FILE_ENABLED,
+    log_file_path=settings.LOG_FILE_PATH,
+    file_rotation=settings.LOG_FILE_ROTATION,
+    file_retention=settings.LOG_FILE_RETENTION,
+    file_compression=settings.LOG_FILE_COMPRESSION,
+)
 
 celery = Celery(
     "docsmcp_worker",

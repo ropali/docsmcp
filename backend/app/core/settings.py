@@ -30,6 +30,15 @@ class Settings(BaseSettings):
 
     VERSION: str = "1.0.0"
 
+    # Logging Settings
+    LOG_LEVEL: str = Field(default="INFO", alias="LOG_LEVEL")
+    LOG_JSON: bool = Field(default=False, alias="LOG_JSON")
+    LOG_FILE_ENABLED: bool = Field(default=False, alias="LOG_FILE_ENABLED")
+    LOG_FILE_PATH: str = Field(default="logs/docsmcp.log", alias="LOG_FILE_PATH")
+    LOG_FILE_ROTATION: str = Field(default="50 MB", alias="LOG_FILE_ROTATION")
+    LOG_FILE_RETENTION: str = Field(default="14 days", alias="LOG_FILE_RETENTION")
+    LOG_FILE_COMPRESSION: str = Field(default="gz", alias="LOG_FILE_COMPRESSION")
+
     # File Upload Settings
     FILE_UPLOAD_DIR: str = Field(
         default="/tmp/docsmcp_uploads",
