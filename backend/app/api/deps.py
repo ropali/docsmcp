@@ -1,5 +1,5 @@
-from app.respositories.crawl_job_repo import CrawlJobRepository
-from app.respositories import PageRepository, SourceRepository
+from app.repositories.crawl_job_repo import CrawlJobRepository
+from app.repositories import PageRepository, SourceRepository
 from collections.abc import AsyncGenerator
 from typing import Annotated
 

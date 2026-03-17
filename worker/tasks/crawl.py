@@ -4,9 +4,9 @@ import asyncio
 from pathlib import Path
 
 from app.models import JobStatus, SourceStatus
-from app.respositories import PageRepository
-from app.respositories.source_repo import SourceRepository
-from app.respositories.crawl_job_repo import CrawlJobRepository
+from app.repositories import PageRepository
+from app.repositories.source_repo import SourceRepository
+from app.repositories.crawl_job_repo import CrawlJobRepository
 from loguru import logger
 from worker.db.session import get_db_session
 from worker.pipeline.config import CrawlConfig
