@@ -30,8 +30,3 @@ async def get_db_session() -> AsyncIterator[AsyncSession]:
         finally:
             await session.close()
             await engine.dispose()
-
-
-async def auto_close_db() -> None:
-    # Engine is now scoped per session in get_db_session.
-    return None

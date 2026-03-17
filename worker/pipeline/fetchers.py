@@ -1,4 +1,3 @@
-import os
 from worker.pipeline.config import CrawlConfig
 from abc import ABC, abstractmethod
 from urllib.parse import urlparse

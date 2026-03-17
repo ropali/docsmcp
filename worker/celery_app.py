@@ -1,10 +1,6 @@
-import asyncio
-
-from celery.signals import worker_process_shutdown
 from celery import Celery
 from app.core.settings import settings
 from app.core.logging import set_logger
-from worker.db.session import auto_close_db
 
 set_logger(
     log_level=settings.LOG_LEVEL,
@@ -34,8 +30,3 @@ celery.conf.update(
 )
 
 celery.autodiscover_tasks(["worker"], related_name="tasks", force=True)
-
-
-@worker_process_shutdown.connect
-def worker_shutdown_event(*args, **kwargs):
-    asyncio.run(auto_close_db())
