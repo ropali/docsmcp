@@ -55,7 +55,12 @@ async def create_new_source(
     )
 
     if response:
-        await crawl_job_repo.create(source_id=response.id)
+        job = await crawl_job_repo.create(source_id=response.id)
+        celery_client.send_task(
+            "worker.tasks.crawl.crawl_source_task",
+            args=[str(job.id)],
+            queue="crawl",
+        )
 
     return SourceCreateResponse(
         status=status.HTTP_201_CREATED,

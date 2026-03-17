@@ -1,10 +1,11 @@
+import os
 from worker.pipeline.config import CrawlConfig
 from abc import ABC, abstractmethod
 from urllib.parse import urlparse
 
 import httpx
 
-from worker.pipeline.js_detector import JSRendererDetector
+from worker.pipeline.js_detector import JSRenderDetector
 
 from loguru import logger
 
@@ -65,7 +66,7 @@ class PlaywrightFetcher(BaseFetcher):
             ) from exc
 
         self._playwright = await async_playwright().start()
-        self._browser = await self._playwright.chromium.launch(headless=True)
+        self._browser = await self._playwright.chromium.launch(headless=False)
         self._context = await self._browser.new_context(user_agent=self._user_agent)
         return self._context
 
@@ -74,12 +75,25 @@ class PlaywrightFetcher(BaseFetcher):
         page = await context.new_page()
 
         try:
+            from playwright.async_api import TimeoutError as PlaywrightTimeoutError
+
             response = await page.goto(
                 url,
                 wait_until="domcontentloaded",
                 timeout=timeout * 1000,
             )
-            await page.wait_for_load_state("networkidle", timeout=timeout * 1000)
+
+            # "networkidle" is unreliable for pages with long-polling/beacons.
+            # If it times out, fall back to current DOM instead of failing fetch.
+            try:
+                await page.wait_for_load_state("networkidle", timeout=timeout * 1000)
+            except PlaywrightTimeoutError:
+                logger.warning(
+                    "PlaywrightFetcher: networkidle timeout for {}; returning current DOM",
+                    url,
+                )
+
+            await page.wait_for_selector("main, article")
 
             if response is not None:
                 content_type = response.headers.get("content-type", "")
@@ -87,7 +101,13 @@ class PlaywrightFetcher(BaseFetcher):
                 if "text/html" not in content_type:
                     return None
 
-            return await page.content()
+            html = await page.locator("main").inner_html()
+
+            if not html:
+                # try for article tag
+                html = await page.locator("article").inner_html()
+
+            return html
         except Exception as e:
             logger.error(f"PlaywrightFetcher Error: {e}")
             return None
@@ -120,7 +140,7 @@ class AutoFetcher(BaseFetcher):
         self._http = HttpFetcher(user_agent=user_agent)
         self._playwright: PlaywrightFetcher = PlaywrightFetcher(user_agent=user_agent)
         self._user_agent = user_agent
-        self._detector = JSRendererDetector()
+        self._detector = JSRenderDetector()
         # domain -> bool cache so we only detect once per domain
         self._domain_needs_js: dict[str, bool] = {}
 
@@ -142,7 +162,8 @@ class AutoFetcher(BaseFetcher):
             # TODO: Handle this or use platwright to get the content
             raise ValueError(f"No HTML content found for url: {url}")
 
-        result = self._detector.analyse(html)
+        result = self._detector.analyze(html)
+        logger.info(f"Auto JS Detection Result: {result}")
 
         if result.needs_js:
             logger.info("AutoFetcher: URL Fetching Needs JS Renderer.")
