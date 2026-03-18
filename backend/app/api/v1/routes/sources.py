@@ -1,35 +1,41 @@
+from app.core.settings import settings
 from app.core.clients.celery import celery_client
 import hashlib
-from pathlib import Path
 import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile, status
 
-from app.core.settings import settings
 from app.models import SourceStatus, SourceType
 from app.schemas.generic import JSONResponse
 from app.api.deps import PageRepoDep, SourceRepoDep, CrawlJobRepoDep
 from app.schemas.source import SourceResponse, SourceCreate, SourceCreateResponse
+from app.services.storage import StorageService, get_storage_service
 
 
-source_router = APIRouter(prefix="/sources")
-UPLOAD_CHUNK_SIZE = 1024 * 1024
+source_router = APIRouter(prefix="/sources", tags=["sources"])
 
 
-async def _write_upload_to_disk(file: UploadFile, destination: Path) -> tuple[int, str]:
-    destination.parent.mkdir(parents=True, exist_ok=True)
+async def _upload_file_to_storage(
+    file: UploadFile, object_key: str, storage: StorageService
+) -> tuple[int, str, str]:
     hasher = hashlib.sha256()
     size = 0
+    payload = bytearray()
+    content_type = file.content_type
 
-    with destination.open("wb") as output:
-        while chunk := await file.read(UPLOAD_CHUNK_SIZE):
-            output.write(chunk)
-            hasher.update(chunk)
-            size += len(chunk)
+    while chunk := await file.read(settings.UPLOAD_CHUNK_SIZE):
+        payload.extend(chunk)
+        hasher.update(chunk)
+        size += len(chunk)
 
     await file.close()
-    return size, hasher.hexdigest()
+    storage_uri = storage.upload_bytes(
+        object_key=object_key,
+        body=bytes(payload),
+        content_type=content_type,
+    )
+    return size, hasher.hexdigest(), storage_uri
 
 
 @source_router.get("/", response_model=list[SourceResponse])
@@ -159,27 +165,30 @@ async def upload_source_files(
             status_code=status.HTTP_400_BAD_REQUEST, detail="No files were provided."
         )
 
-    upload_dir = Path(settings.FILE_UPLOAD_DIR) / str(source.id)
-    upload_dir.mkdir(parents=True, exist_ok=True)
+    storage = get_storage_service()
     uploaded_files: list[dict] = []
 
     for file in valid_files:
-        original_name = Path(file.filename or "upload.bin").name
+        original_name = (
+            (file.filename or "upload.bin").rsplit("/", 1)[-1].rsplit("\\", 1)[-1]
+        )
         stored_name = f"{uuid.uuid4()}_{original_name}"
-        saved_path = upload_dir / stored_name
-        size, content_hash = await _write_upload_to_disk(file, saved_path)
+        object_key = f"sources/{source.id}/{stored_name}"
+        size, content_hash, file_uri = await _upload_file_to_storage(
+            file, object_key, storage
+        )
 
         page = await page_repo.create(
             source_id=source.id,
             title=original_name,
-            file_path=str(saved_path),
+            file_path=file_uri,
             content_hash=content_hash,
         )
         uploaded_files.append(
             {
                 "file_id": page.id,
                 "filename": original_name,
-                "file_path": str(saved_path),
+                "file_path": file_uri,
                 "size": size,
             }
         )
@@ -191,6 +200,7 @@ async def upload_source_files(
     )
 
     await crawl_job_repo.create(source_id=source.id)
+    # TODO: Send this job to celery queue
 
     return JSONResponse(
         status=status.HTTP_201_CREATED,
@@ -199,8 +209,7 @@ async def upload_source_files(
     )
 
 
-@source_router.get("/{id:uuid}/pages")
-async def list_all_pages_by_source_id(id: uuid.UUID, page_repo: PageRepoDep):
-    pages = await page_repo.list(source_id=id)
-
-    return pages
+@source_router.get("/{id:uuid}/files")
+async def list_all_files_by_source(id: uuid.UUID):
+    """List files attached to a FILE-type source"""
+    # TODO: Implement this API

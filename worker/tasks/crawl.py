@@ -1,17 +1,17 @@
 import uuid
 import argparse
 import asyncio
-from pathlib import Path
+import hashlib
 
 from app.models import JobStatus, SourceStatus
 from app.repositories import PageRepository
 from app.repositories.source_repo import SourceRepository
 from app.repositories.crawl_job_repo import CrawlJobRepository
+from app.services.storage import get_storage_service
 from loguru import logger
 from worker.db.session import get_db_session
 from worker.pipeline.config import CrawlConfig
 from worker.pipeline.crawler import Crawler
-from worker.utils.files import file_sha256
 
 
 try:
@@ -43,24 +43,27 @@ async def _crawl_source(task, job_id: str):
             crawler = Crawler(config)
 
             result = await crawler.crawl()
+            storage = get_storage_service()
 
             for page in result.pages:
-                # TODO: Remove hardcoded path
-                file_path = Path("/home/ropalim/Workspace/docsmcp/uploads/") / str(
-                    uuid.uuid4()
+                html_bytes = page.html.encode("utf-8")
+                file_hash = hashlib.sha256(html_bytes).hexdigest()
+                object_key = (
+                    f"crawl/{source.id}/{uuid.uuid4()}.html"
                 )
 
-                with open(file_path, "w") as file:
-                    file.write(page.html)
-
-                file_hash = file_sha256(file_path.absolute())
+                file_path = storage.upload_bytes(
+                    object_key=object_key,
+                    body=html_bytes,
+                    content_type="text/html; charset=utf-8",
+                )
 
                 # TODO: Peform bulk operation
                 await page_repo.create(
                     source_id=source.id,
                     url=page.url,
                     content_hash=file_hash,
-                    file_path=str(file_path),
+                    file_path=file_path,
                 )
 
                 # TODO: Handle failed URLS

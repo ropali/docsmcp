@@ -33,6 +33,11 @@ class PageRepository:
         await self._session.refresh(page)
         return page
 
+    async def get_by_id(self, page_id: uuid.UUID) -> Page | None:
+        result = await self._session.execute(select(Page).where(Page.id == page_id))
+
+        return result.scalar_one_or_none()
+
     async def list(self, *, source_id: uuid.UUID) -> List[Page]:
         result = await self._session.execute(
             select(Page).where(Page.source_id == source_id)

@@ -1,3 +1,4 @@
+import os
 from functools import lru_cache
 
 from pydantic import Field
@@ -6,6 +7,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     """Application settings/configuration class"""
+
+    STAGE: str = Field(default=os.environ.get("STAGE", "dev"))
 
     # Database Settings
     POSTGRES_DATABASE_URL: str = Field(
@@ -26,7 +29,7 @@ class Settings(BaseSettings):
     # API Settings
     API_V1_PREFIX: str = "/api/v1"
     PROJECT_NAME: str = "DocsMCP"
-    DEBUG: bool = False
+    DEBUG: bool = STAGE == "dev"
 
     VERSION: str = "1.0.0"
 
@@ -43,6 +46,23 @@ class Settings(BaseSettings):
     FILE_UPLOAD_DIR: str = Field(
         default="/tmp/docsmcp_uploads",
         alias="FILE_UPLOAD_DIR",
+    )
+
+    UPLOAD_CHUNK_SIZE: int = 1024 * 1024
+
+    STORAGE_BACKEND: str = Field(default="s3", alias="STORAGE_BACKEND")
+
+    S3_BUCKET_NAME: str = Field(default="docsmcp-dev", alias="S3_BUCKET_NAME")
+    S3_REGION: str = Field(default="us-east-1", alias="S3_REGION")
+    S3_ENDPOINT_URL: str | None = Field(
+        default="http://localhost:4566",
+        alias="S3_ENDPOINT_URL",
+    )
+    S3_USE_PATH_STYLE: bool = Field(default=True, alias="S3_USE_PATH_STYLE")
+    AWS_ACCESS_KEY_ID: str = Field(default="test", alias="AWS_ACCESS_KEY_ID")
+    AWS_SECRET_ACCESS_KEY: str = Field(
+        default="test",
+        alias="AWS_SECRET_ACCESS_KEY",
     )
 
     # CORS Settings
