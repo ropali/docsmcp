@@ -1,4 +1,4 @@
-from typing import List
+from typing import Any, List
 from sqlalchemy.sql import select
 
 import uuid
@@ -32,6 +32,15 @@ class PageRepository:
         await self._session.commit()
         await self._session.refresh(page)
         return page
+
+    async def bulk_create(self, pages: list[dict[str, Any]]) -> list[Page]:
+        if not pages:
+            return []
+
+        records = [Page(**page_data) for page_data in pages]
+        self._session.add_all(records)
+        await self._session.commit()
+        return records
 
     async def get_by_id(self, page_id: uuid.UUID) -> Page | None:
         result = await self._session.execute(select(Page).where(Page.id == page_id))

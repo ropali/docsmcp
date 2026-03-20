@@ -1,3 +1,4 @@
+from typing import Any
 import uuid
 import argparse
 import asyncio
@@ -45,12 +46,12 @@ async def _crawl_source(task, job_id: str):
             result = await crawler.crawl()
             storage = get_storage_service()
 
+            pages: list[dict[str, Any]] = []
+
             for page in result.pages:
                 html_bytes = page.html.encode("utf-8")
                 file_hash = hashlib.sha256(html_bytes).hexdigest()
-                object_key = (
-                    f"crawl/{source.id}/{uuid.uuid4()}.html"
-                )
+                object_key = f"crawl/{source.id}/{uuid.uuid4()}.html"
 
                 file_path = storage.upload_bytes(
                     object_key=object_key,
@@ -58,15 +59,18 @@ async def _crawl_source(task, job_id: str):
                     content_type="text/html; charset=utf-8",
                 )
 
-                # TODO: Peform bulk operation
-                await page_repo.create(
-                    source_id=source.id,
-                    url=page.url,
-                    content_hash=file_hash,
-                    file_path=file_path,
+                pages.append(
+                    {
+                        "source_id": source.id,
+                        "url": page.url,
+                        "content_hash": file_hash,
+                        "file_path": file_path,
+                    }
                 )
 
-                # TODO: Handle failed URLS
+            await page_repo.bulk_create(pages)
+
+            # TODO: Handle failed URLS
 
             await source_repo.update_progress(
                 source, page_count=len(result.pages), status=SourceStatus.READY
