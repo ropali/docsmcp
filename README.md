@@ -4,14 +4,56 @@ This repository uses a `uv` workspace with independently deployable modules:
 
 - `backend`
 - `mcp_server`
-- `worker`
+- `crawler`
+
+## Architecture
+
+```text
++-------------------+          HTTP /api/v1           +----------------------+
+| Client / Consumer | -----------------------------> | backend (FastAPI)    |
++-------------------+                                |----------------------|
+                                                     | routes               |
+                                                     | repositories         |
+                                                     | celery producer      |
+                                                     | storage service      |
+                                                     +----------+-----------+
+                                                                |
+                         +--------------------------------------+----------------------------------+
+                         |                                      |                                  |
+                         v                                      v                                  v
+               +-------------------+                  +-------------------+              +-------------------+
+               | PostgreSQL        |                  | Redis             |              | S3 / Storage      |
+               |-------------------|                  |-------------------|              |-------------------|
+               | sources           |                  | Celery broker     |              | uploaded files    |
+               | pages             |                  | result backend    |              | crawled HTML      |
+               | crawl_jobs        |                  +---------+---------+              +---------+---------+
+               +-------------------+                            |                                  ^
+                                                                |                                  |
+                                                                v                                  |
+                                                     +----------------------+                      |
+                                                     | crawler (Celery)     | ---------------------+
+                                                     |----------------------|
+                                                     | crawl_source_task    |
+                                                     | crawler pipeline     |
+                                                     | httpx / Playwright   |
+                                                     | shared DB models     |
+                                                     +----------+-----------+
+                                                                |
+                                                                v
+                                                     +----------------------+
+                                                     | External websites    |
+                                                     |----------------------|
+                                                     | source URLs crawled  |
+                                                     +----------------------+
+
+```
 
 ## Build each module independently
 
 ```bash
 uv build --package backend
 uv build --package mcp-server
-uv build --package worker
+uv build --package crawler
 ```
 
 Build artifacts are written to `./dist/`.
@@ -21,7 +63,7 @@ Build artifacts are written to `./dist/`.
 ```bash
 uv run --package backend backend
 uv run --package mcp-server mcp-server
-uv run --package worker worker
+uv run --package crawler crawler
 ```
 
 ## Makefile shortcuts
@@ -41,11 +83,11 @@ make backend build
 make backend run BACKEND_HOST=0.0.0.0 BACKEND_PORT=8080
 ```
 
-`mcp` and `worker` support the same actions:
+`mcp` and `crawler` support the same actions:
 
 ```bash
 make mcp add mcp
-make worker add celery
+make crawler add celery
 ```
 
 Variable-style aliases:
@@ -53,7 +95,7 @@ Variable-style aliases:
 ```bash
 make backend-add DEPS="httpx redis"
 make mcp-add-dev DEPS="pytest"
-make worker-build
+make crawler-build
 ```
 
 ## Backend migrations (Alembic)

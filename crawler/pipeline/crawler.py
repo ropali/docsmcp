@@ -6,9 +6,9 @@ from urllib.parse import urlparse
 
 from pydantic.dataclasses import dataclass
 
-from worker.pipeline.config import CrawlConfig
-from worker.pipeline.fetchers import BaseFetcher, FetcherFactory, HttpFetcher
-from worker.utils.url_utils import (
+from crawler.pipeline.config import CrawlConfig
+from crawler.pipeline.fetchers import BaseFetcher, FetcherFactory, HttpFetcher
+from crawler.utils.url_utils import (
     extract_links,
     fetch_robots_txt,
     is_html_link,

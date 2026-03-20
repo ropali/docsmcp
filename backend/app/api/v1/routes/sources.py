@@ -63,7 +63,7 @@ async def create_new_source(
     if response:
         job = await crawl_job_repo.create(source_id=response.id)
         celery_client.send_task(
-            "worker.tasks.crawl.crawl_source_task",
+            "crawler.tasks.crawl.crawl_source_task",
             args=[str(job.id)],
             queue="crawl",
         )
@@ -93,7 +93,7 @@ async def refresh_source_by_id(id: uuid.UUID, repo: CrawlJobRepoDep):
         )
 
     task = celery_client.send_task(
-        "worker.tasks.crawl.crawl_source_task",
+        "crawler.tasks.crawl.crawl_source_task",
         args=[str(sources[0].id)],
         queue="crawl",
     )

@@ -9,13 +9,13 @@ from app.repositories.source_repo import SourceRepository
 from app.repositories.crawl_job_repo import CrawlJobRepository
 from app.services.storage import get_storage_service
 from loguru import logger
-from worker.db.session import get_db_session
-from worker.pipeline.config import CrawlConfig
-from worker.pipeline.crawler import Crawler
+from crawler.db.session import get_db_session
+from crawler.pipeline.config import CrawlConfig
+from crawler.pipeline.crawler import Crawler
 
 
 try:
-    from worker.celery_app import celery
+    from crawler.celery_app import celery
 except Exception:
     celery = None
 
@@ -84,7 +84,7 @@ async def _crawl_source(task, job_id: str):
 
 def run_crawl_job(job_id: str):
     """
-    Run a crawl job directly without requiring Celery worker orchestration.
+    Run a crawl job directly without requiring Celery orchestration.
     """
     asyncio.run(_crawl_source(None, job_id))
 
@@ -96,7 +96,7 @@ if celery is not None:
         queue="crawl",
         max_retries=3,
         default_retry_delay=60,
-        name="worker.tasks.crawl.crawl_source_task",
+        name="crawler.tasks.crawl.crawl_source_task",
     )
     def crawl_source_task(self, job_id: str):
         """

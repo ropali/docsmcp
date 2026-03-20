@@ -2,5 +2,5 @@
 members = [
     "backend",
     "mcp_server",
-    "worker",
+    "crawler",
 ]

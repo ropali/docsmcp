@@ -6,7 +6,7 @@ requires-python = ">=3.14"
 members = [
     "backend",
     "mcp-server",
-    "worker",
+    "crawler",
 ]
 
 [[package]]
@@ -786,9 +786,9 @@ wheels = [
 ]
 
 [[package]]
-name = "worker"
+name = "crawler"
 version = "0.1.0"
-source = { editable = "worker" }
+source = { editable = "crawler" }
 dependencies = [
     { name = "backend" },
     { name = "beautifulsoup4" },

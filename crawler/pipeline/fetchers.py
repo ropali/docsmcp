@@ -1,10 +1,10 @@
-from worker.pipeline.config import CrawlConfig
+from crawler.pipeline.config import CrawlConfig
 from abc import ABC, abstractmethod
 from urllib.parse import urlparse
 
 import httpx
 
-from worker.pipeline.js_detector import JSRenderDetector
+from crawler.pipeline.js_detector import JSRenderDetector
 
 from loguru import logger
 

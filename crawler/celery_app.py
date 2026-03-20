@@ -13,7 +13,7 @@ set_logger(
 )
 
 celery = Celery(
-    "docsmcp_worker",
+    "docsmcp_crawler",
     broker=settings.REDIS_URL,
     backend=settings.REDIS_URL,
 )
@@ -22,11 +22,11 @@ celery.conf.update(
     task_serializer="json",
     result_expires=3600,
     task_acks_late=True,  # only ack after task succeeds
-    worker_prefetch_multiplier=1,  # one task at a time per worker
+    worker_prefetch_multiplier=1,  # one task at a time per crawler process
     task_routes={
-        "worker.tasks.crawl.*": {"queue": "crawl"},
-        "worker.tasks.embed.*": {"queue": "embed"},
+        "crawler.tasks.crawl.*": {"queue": "crawl"},
+        "crawler.tasks.embed.*": {"queue": "embed"},
     },
 )
 
-celery.autodiscover_tasks(["worker"], related_name="tasks", force=True)
+celery.autodiscover_tasks(["crawler"], related_name="tasks", force=True)

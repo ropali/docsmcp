@@ -5,13 +5,13 @@ UV_CACHE_DIR ?= /tmp/uv-cache
 BACKEND_HOST ?= 127.0.0.1
 BACKEND_PORT ?= 8000
 
-SERVICES := backend mcp worker
+SERVICES := backend mcp crawler
 
 .PHONY: help \
-	backend mcp worker \
+	backend mcp crawler \
 	backend-add backend-add-dev backend-run backend-build backend-sync backend-migrate backend-downgrade backend-revision backend-db-check \
 	mcp-add mcp-add-dev mcp-run mcp-build mcp-sync \
-	worker-add worker-add-dev worker-run worker-celery worker-build worker-sync \
+	crawler-add crawler-add-dev crawler-run crawler-celery crawler-build crawler-sync \
 	build-all sync-all lock clean-dist
 
 help:
@@ -29,7 +29,7 @@ help:
 	@echo "  make backend db-check"
 	@echo "  make backend run BACKEND_HOST=0.0.0.0 BACKEND_PORT=8080"
 	@echo ""
-	@echo "Supported services: backend, mcp, worker"
+	@echo "Supported services: backend, mcp, crawler"
 	@echo ""
 	@echo "Explicit aliases (variable-style):"
 	@echo "  make backend-add DEPS='httpx redis'"
@@ -41,8 +41,8 @@ help:
 # Command-style dispatcher:
 #   make backend add dep1 dep2
 #   make mcp build
-#   make worker run
-backend mcp worker:
+#   make crawler run
+backend mcp crawler:
 	@$(MAKE) service-cmd SERVICE=$@ ARGS="$(filter-out $@,$(MAKECMDGOALS))" --no-print-directory
 
 .PHONY: service-cmd
@@ -52,7 +52,7 @@ service-cmd:
 	case "$$service" in \
 	  backend) pkg="backend" ;; \
 	  mcp) pkg="mcp-server" ;; \
-	  worker) pkg="worker" ;; \
+	  crawler) pkg="crawler" ;; \
 	  *) echo "Unknown service: $$service"; exit 1 ;; \
 	esac; \
 	set -- $(ARGS); \
@@ -68,8 +68,8 @@ service-cmd:
 	  run) \
 	    if [ "$$service" = "backend" ]; then \
 	      UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) run --package "$$pkg" uvicorn app.main:app --reload --host "$(BACKEND_HOST)" --port "$(BACKEND_PORT)"; \
-	    elif [ "$$service" = "worker" ]; then \
-	      UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) run --package "$$pkg" celery -A worker.celery_app:celery worker -l info -Q crawl; \
+	    elif [ "$$service" = "crawler" ]; then \
+	      UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) run --package "$$pkg" celery -A crawler.celery_app:celery worker -l info -Q crawl; \
 	    else \
 	      cmd="$$service"; [ "$$service" = "mcp" ] && cmd="mcp-server"; \
 	      UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) run --package "$$pkg" "$$cmd"; \
@@ -102,7 +102,7 @@ service-cmd:
 
 # Variable-style aliases:
 #   make backend-add DEPS='httpx redis'
-#   make worker-add-dev DEPS='pytest'
+#   make crawler-add-dev DEPS='pytest'
 backend-add:
 	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) add --package backend $(DEPS)
 
@@ -146,33 +146,33 @@ mcp-build:
 mcp-sync:
 	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) sync --package mcp-server
 
-worker-add:
-	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) add --package worker $(DEPS)
+crawler-add:
+	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) add --package crawler $(DEPS)
 
-worker-add-dev:
-	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) add --package worker --dev $(DEPS)
+crawler-add-dev:
+	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) add --package crawler --dev $(DEPS)
 
-worker-run:
-	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) run --package worker worker
+crawler-run:
+	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) run --package crawler crawler
 
-worker-celery:
-	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) run --package worker celery -A worker.celery_app:celery worker -l info -Q crawl
+crawler-celery:
+	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) run --package crawler celery -A crawler.celery_app:celery worker -l info -Q crawl
 
-worker-build:
-	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) build --package worker
+crawler-build:
+	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) build --package crawler
 
-worker-sync:
-	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) sync --package worker
+crawler-sync:
+	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) sync --package crawler
 
 build-all:
 	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) build --package backend
 	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) build --package mcp-server
-	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) build --package worker
+	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) build --package crawler
 
 sync-all:
 	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) sync --package backend
 	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) sync --package mcp-server
-	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) sync --package worker
+	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) sync --package crawler
 
 lock:
 	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) lock
