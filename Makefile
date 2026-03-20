@@ -5,13 +5,14 @@ UV_CACHE_DIR ?= /tmp/uv-cache
 BACKEND_HOST ?= 127.0.0.1
 BACKEND_PORT ?= 8000
 
-SERVICES := backend mcp crawler
+SERVICES := backend mcp crawler rag
 
 .PHONY: help \
-	backend mcp crawler \
+	backend mcp crawler rag \
 	backend-add backend-add-dev backend-run backend-build backend-sync backend-migrate backend-downgrade backend-revision backend-db-check \
 	mcp-add mcp-add-dev mcp-run mcp-build mcp-sync \
 	crawler-add crawler-add-dev crawler-run crawler-celery crawler-build crawler-sync \
+	rag-add rag-add-dev rag-run rag-build rag-sync \
 	build-all sync-all lock clean-dist
 
 help:
@@ -29,7 +30,7 @@ help:
 	@echo "  make backend db-check"
 	@echo "  make backend run BACKEND_HOST=0.0.0.0 BACKEND_PORT=8080"
 	@echo ""
-	@echo "Supported services: backend, mcp, crawler"
+	@echo "Supported services: backend, mcp, crawler, rag"
 	@echo ""
 	@echo "Explicit aliases (variable-style):"
 	@echo "  make backend-add DEPS='httpx redis'"
@@ -42,7 +43,8 @@ help:
 #   make backend add dep1 dep2
 #   make mcp build
 #   make crawler run
-backend mcp crawler:
+#   make rag add openai qdrant-client
+backend mcp crawler rag:
 	@$(MAKE) service-cmd SERVICE=$@ ARGS="$(filter-out $@,$(MAKECMDGOALS))" --no-print-directory
 
 .PHONY: service-cmd
@@ -53,6 +55,7 @@ service-cmd:
 	  backend) pkg="backend" ;; \
 	  mcp) pkg="mcp-server" ;; \
 	  crawler) pkg="crawler" ;; \
+	  rag) pkg="rag" ;; \
 	  *) echo "Unknown service: $$service"; exit 1 ;; \
 	esac; \
 	set -- $(ARGS); \
@@ -103,6 +106,7 @@ service-cmd:
 # Variable-style aliases:
 #   make backend-add DEPS='httpx redis'
 #   make crawler-add-dev DEPS='pytest'
+#   make rag-add DEPS='openai qdrant-client'
 backend-add:
 	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) add --package backend $(DEPS)
 
@@ -164,15 +168,32 @@ crawler-build:
 crawler-sync:
 	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) sync --package crawler
 
+rag-add:
+	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) add --package rag $(DEPS)
+
+rag-add-dev:
+	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) add --package rag --dev $(DEPS)
+
+rag-run:
+	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) run --package rag rag
+
+rag-build:
+	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) build --package rag
+
+rag-sync:
+	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) sync --package rag
+
 build-all:
 	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) build --package backend
 	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) build --package mcp-server
 	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) build --package crawler
+	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) build --package rag
 
 sync-all:
 	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) sync --package backend
 	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) sync --package mcp-server
 	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) sync --package crawler
+	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) sync --package rag
 
 lock:
 	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) lock
