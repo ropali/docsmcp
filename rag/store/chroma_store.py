@@ -2,7 +2,7 @@ from models.documents import Document
 import chromadb
 
 
-class ChromaVectoreStore:
+class ChromaVectorStore:
     def __init__(self, collection_name: str):
         self.client = chromadb.PersistentClient(path="../../chroma.db")
         self.collection = self.client.get_or_create_collection(collection_name)

@@ -38,7 +38,7 @@ class IngestionPipeline:
             all_chunks.extend(chunks)
 
         # Batch embedding
-        texts = [c.conten for c in all_chunks]
+        texts = [c.content for c in all_chunks]
 
         vectors = self.embedder.embed(texts)
         self.store.upsert(all_chunks, vectors)
