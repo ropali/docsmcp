@@ -1,4 +1,4 @@
-# docsMCP workspace
+# DocsMCP - Turn any webpage into LLM-ready context.
 
 This repository uses a `uv` workspace with independently deployable modules:
 
