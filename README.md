@@ -1,5 +1,8 @@
 # DocsMCP - Turn any webpage into LLM-ready context.
 
+> [!NOTE]
+> This repository is work in progress and can introduce major breaking changes at any time.
+
 This repository uses a `uv` workspace with independently deployable modules:
 
 - `backend`
