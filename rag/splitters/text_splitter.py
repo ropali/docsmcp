@@ -1,5 +1,5 @@
-from models.documents import Document
-from splitters.base import TextSplitter
+from rag.models.documents import Document
+from rag.splitters.base import TextSplitter
 
 
 class RecursiveCharacterSplitter(TextSplitter):

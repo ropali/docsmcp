@@ -1,5 +1,5 @@
 from typing import Protocol
-from models.documents import Document
+from rag.models.documents import Document
 
 
 class TextSplitter(Protocol):

@@ -29,7 +29,6 @@ class Settings(BaseSettings):
     # API Settings
     API_V1_PREFIX: str = "/api/v1"
     PROJECT_NAME: str = "DocsMCP"
-    DEBUG: bool = STAGE == "dev"
 
     VERSION: str = "1.0.0"
 
@@ -72,6 +71,13 @@ class Settings(BaseSettings):
     )
     CORS_METHODS: list[str] = Field(default=["*"], alias="CORS_METHODS")
     CORS_HEADERS: list[str] = Field(default=["*"], alias="CORS_HEADERS")
+
+    # Vector DB
+    VECTOR_COLLECTION_NAME: str = "docsmcp-vectors"
+
+    @property
+    def debug(self) -> bool:
+        return self.STAGE == "dev"
 
     model_config = SettingsConfigDict(
         env_file=("backend/.env", ".env"),

@@ -73,6 +73,8 @@ service-cmd:
 	      UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) run --package "$$pkg" uvicorn app.main:app --reload --host "$(BACKEND_HOST)" --port "$(BACKEND_PORT)"; \
 	    elif [ "$$service" = "crawler" ]; then \
 	      UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) run --package "$$pkg" celery -A crawler.celery_app:celery worker -l info -Q crawl; \
+	    elif [ "$$service" = "rag" ]; then \
+	      UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) run --package "$$pkg" celery -A rag.celery_app:celery worker -l info -Q embed --pool=solo; \
 	    else \
 	      cmd="$$service"; [ "$$service" = "mcp" ] && cmd="mcp-server"; \
 	      UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) run --package "$$pkg" "$$cmd"; \
@@ -175,7 +177,7 @@ rag-add-dev:
 	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) add --package rag --dev $(DEPS)
 
 rag-run:
-	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) run --package rag rag
+	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) run --package rag celery -A rag.celery_app:celery worker -l info -Q embed --pool=solo
 
 rag-build:
 	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) build --package rag

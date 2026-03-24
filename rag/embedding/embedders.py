@@ -1,5 +1,5 @@
 from sentence_transformers import SentenceTransformer
-from embedding.base import Embedder
+from rag.embedding.base import Embedder
 
 
 class LocalEmbedder(Embedder):

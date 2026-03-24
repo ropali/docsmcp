@@ -1,7 +1,8 @@
 from typing import Protocol
-from models.documents import Document
-from abc import ABC, abstractmethod
+
 from bs4 import BeautifulSoup
+
+from rag.models.documents import Document
 
 
 class DocumentLoader(Protocol):

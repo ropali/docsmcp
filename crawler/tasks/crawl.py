@@ -1,3 +1,4 @@
+from app.core.clients.celery import celery_client
 from typing import Any
 import uuid
 import argparse
@@ -68,7 +69,14 @@ async def _crawl_source(task, job_id: str):
                     }
                 )
 
-            await page_repo.bulk_create(pages)
+            pages = await page_repo.bulk_create(pages)
+
+            for p in pages:
+                celery_client.send_task(
+                    "crawler.tasks.embed.ingest_page",
+                    args=[str(p.id)],
+                    queue="embed",
+                )
 
             # TODO: Handle failed URLS
 

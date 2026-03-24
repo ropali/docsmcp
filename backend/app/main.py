@@ -45,7 +45,7 @@ def get_application() -> FastAPI:
         version=settings.VERSION,
         openapi_version="3.0.3",
         lifespan=lifespan,
-        debug=settings.DEBUG,
+        debug=settings.debug,
         docs_url="/docs",
         default_response_class=ORJSONResponse,
     )

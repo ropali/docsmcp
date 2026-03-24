@@ -1,4 +1,4 @@
-from models.documents import Document
+from rag.models.documents import Document
 import chromadb
 
 

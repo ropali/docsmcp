@@ -1,8 +1,8 @@
 from dataclasses import dataclass
-from store.base_vector_store import VectorStore
-from embedding.base import Embedder
-from splitters.base import TextSplitter
-from loaders import DocumentLoader
+from rag.store.base_vector_store import VectorStore
+from rag.embedding.base import Embedder
+from rag.splitters.base import TextSplitter
+from rag.loaders import DocumentLoader
 from loguru import logger
 
 
