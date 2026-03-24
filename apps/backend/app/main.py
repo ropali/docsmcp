@@ -1,3 +1,4 @@
+from common.settings import get_settings
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
@@ -9,7 +10,6 @@ from loguru import logger
 
 from app.api.exceptions import validation_exception_handler
 from app.api.main import api_router
-from app.core.settings import settings
 from app.core.events import shutdown_db_clients, startup_db_clients
 from app.core.logging import set_logger
 
@@ -30,6 +30,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
 
 def get_application() -> FastAPI:
     """Returns a FastAPI application instance."""
+    settings = get_settings()
     set_logger(
         log_level=settings.LOG_LEVEL,
         json_logs=settings.LOG_JSON,

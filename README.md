@@ -3,11 +3,13 @@
 > [!NOTE]
 > This repository is work in progress and can introduce major breaking changes at any time.
 
-This repository uses a `uv` workspace with independently deployable modules:
+This repository uses a `uv` workspace with independently deployable apps and a shared package:
 
-- `backend`
-- `mcp_server`
-- `crawler`
+- `apps/backend`
+- `apps/mcp_server`
+- `apps/crawler`
+- `apps/rag`
+- `packages/common`
 
 ## Architecture
 
@@ -103,7 +105,7 @@ make crawler-build
 
 ## Backend migrations (Alembic)
 
-Alembic is configured in `backend/alembic.ini` with scripts in `backend/migrations`.
+Alembic is configured in `apps/backend/alembic.ini` with scripts in `apps/backend/migrations`.
 
 ```bash
 make backend migrate

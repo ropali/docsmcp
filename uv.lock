@@ -6,6 +6,7 @@ requires-python = ">=3.14"
 members = [
     "backend",
     "crawler",
+    "docsmcp-common",
     "mcp-server",
     "rag",
 ]
@@ -102,17 +103,14 @@ wheels = [
 [[package]]
 name = "backend"
 version = "0.1.0"
-source = { editable = "backend" }
+source = { editable = "apps/backend" }
 dependencies = [
     { name = "alembic" },
     { name = "asyncpg" },
-    { name = "boto3" },
+    { name = "docsmcp-common" },
     { name = "fastapi" },
     { name = "gunicorn" },
-    { name = "loguru" },
     { name = "orjson" },
-    { name = "pydantic" },
-    { name = "pydantic-settings" },
     { name = "python-multipart" },
     { name = "sqlalchemy" },
     { name = "uvicorn" },
@@ -122,13 +120,10 @@ dependencies = [
 requires-dist = [
     { name = "alembic", specifier = ">=1.18.4" },
     { name = "asyncpg", specifier = ">=0.31.0" },
-    { name = "boto3", specifier = ">=1.40.0" },
+    { name = "docsmcp-common", editable = "packages/common" },
     { name = "fastapi", specifier = ">=0.135.1" },
     { name = "gunicorn", specifier = ">=25.1.0" },
-    { name = "loguru", specifier = ">=0.7.3" },
     { name = "orjson", specifier = ">=3.11.7" },
-    { name = "pydantic", specifier = ">=2.12.5" },
-    { name = "pydantic-settings", specifier = ">=2.13.1" },
     { name = "python-multipart", specifier = ">=0.0.22" },
     { name = "sqlalchemy", specifier = ">=2.0.48" },
     { name = "uvicorn", specifier = ">=0.41.0" },
@@ -422,11 +417,11 @@ wheels = [
 [[package]]
 name = "crawler"
 version = "0.1.0"
-source = { editable = "crawler" }
+source = { editable = "apps/crawler" }
 dependencies = [
-    { name = "backend" },
     { name = "beautifulsoup4" },
     { name = "celery" },
+    { name = "docsmcp-common" },
     { name = "httpx" },
     { name = "playwright" },
     { name = "pydantic" },
@@ -435,9 +430,9 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "backend", editable = "backend" },
     { name = "beautifulsoup4", specifier = ">=4.14.3" },
     { name = "celery", specifier = ">=5.6.2" },
+    { name = "docsmcp-common", editable = "packages/common" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "playwright", specifier = ">=1.55.0" },
     { name = "pydantic", specifier = ">=2.12.5" },
@@ -462,6 +457,25 @@ version = "1.4.3"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c0/59/911a1a597264f1fb7ac176995a0f0b6062e37f8c1b6e0f23071a76838507/cuda_pathfinder-1.4.3-py3-none-any.whl", hash = "sha256:4345d8ead1f701c4fb8a99be6bc1843a7348b6ba0ef3b031f5a2d66fb128ae4c", size = 47951, upload-time = "2026-03-16T21:31:25.526Z" },
+]
+
+[[package]]
+name = "docsmcp-common"
+version = "0.1.0"
+source = { editable = "packages/common" }
+dependencies = [
+    { name = "boto3" },
+    { name = "loguru" },
+    { name = "pydantic" },
+    { name = "pydantic-settings" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "boto3", specifier = ">=1.40.0" },
+    { name = "loguru", specifier = ">=0.7.3" },
+    { name = "pydantic", specifier = ">=2.12.5" },
+    { name = "pydantic-settings", specifier = ">=2.13.1" },
 ]
 
 [[package]]
@@ -873,7 +887,7 @@ wheels = [
 [[package]]
 name = "mcp-server"
 version = "0.1.0"
-source = { editable = "mcp_server" }
+source = { editable = "apps/mcp_server" }
 
 [[package]]
 name = "mdurl"
@@ -1526,15 +1540,17 @@ wheels = [
 [[package]]
 name = "rag"
 version = "0.1.0"
-source = { virtual = "rag" }
+source = { editable = "apps/rag" }
 dependencies = [
     { name = "chromadb" },
+    { name = "docsmcp-common" },
     { name = "sentence-transformers" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "chromadb", specifier = ">=1.5.5" },
+    { name = "docsmcp-common", editable = "packages/common" },
     { name = "sentence-transformers", specifier = ">=5.3.0" },
 ]
 

@@ -116,16 +116,14 @@ def configure_logging(
         force=True,
     )
 
-    loggers = [
+    for logger_name in (
         "uvicorn",
         "uvicorn.access",
         "uvicorn.error",
         "gunicorn",
         "gunicorn.access",
         "gunicorn.error",
-    ]
-
-    for logger_name in loggers:
+    ):
         ext_logger = logging.getLogger(logger_name)
         ext_logger.handlers = [InterceptHandler()]
         ext_logger.propagate = False
@@ -134,7 +132,4 @@ def configure_logging(
 
 
 def set_logger(**kwargs: Any) -> None:
-    """
-    Backward-compatible wrapper for existing imports.
-    """
     configure_logging(**kwargs)

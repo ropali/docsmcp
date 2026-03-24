@@ -1,8 +1,8 @@
-from store.chroma_store import ChromaVectorStore
-from embedding.embedders import LocalEmbedder
-from splitters.text_splitter import RecursiveCharacterSplitter
-from loaders import HTMLLoader
-from pipeline.ingestion import IngestionPipeline, Page
+from rag.embedding.embedders import LocalEmbedder
+from rag.loaders import HTMLLoader
+from rag.pipeline.ingestion import IngestionPipeline, Page
+from rag.splitters.text_splitter import RecursiveCharacterSplitter
+from rag.store.chroma_store import ChromaVectorStore
 
 store = ChromaVectorStore(collection_name="test-col")
 embedder = LocalEmbedder()

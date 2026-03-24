@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+import mimetypes
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from functools import lru_cache
-import mimetypes
 from pathlib import Path, PurePosixPath
 from typing import Iterator
 from urllib.parse import urlparse
@@ -11,7 +11,7 @@ from urllib.parse import urlparse
 import boto3
 from botocore.client import Config
 
-from app.core.settings import settings
+from common.settings import settings
 
 
 def _normalize_object_key(object_key: str) -> str:
@@ -29,12 +29,10 @@ class StorageService(ABC):
         object_key: str,
         body: bytes,
         content_type: str | None = None,
-    ) -> str:
-        pass
+    ) -> str: ...
 
     @abstractmethod
-    def download_file(self, *, storage_path: str) -> "StorageDownload":
-        pass
+    def download_file(self, *, storage_path: str) -> "StorageDownload": ...
 
 
 @dataclass
@@ -57,7 +55,6 @@ class S3StorageService(StorageService):
         use_path_style: bool,
     ):
         self._bucket_name = bucket_name
-        self._region = region
         self._client = boto3.client(
             "s3",
             region_name=region,
@@ -137,7 +134,10 @@ class LocalStorageService(StorageService):
 
         root_resolved = self._root.resolve()
         candidate_resolved = candidate.resolve()
-        if root_resolved != candidate_resolved and root_resolved not in candidate_resolved.parents:
+        if (
+            root_resolved != candidate_resolved
+            and root_resolved not in candidate_resolved.parents
+        ):
             raise ValueError("Storage path is outside configured local storage root.")
         return candidate_resolved
 

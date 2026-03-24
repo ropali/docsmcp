@@ -1,6 +1,6 @@
 from celery import Celery
-from app.core.settings import settings
-from app.core.logging import set_logger
+from common.settings import settings
+from common.logging import set_logger
 
 set_logger(
     log_level=settings.LOG_LEVEL,

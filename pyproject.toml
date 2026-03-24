@@ -1,7 +1,8 @@
 [tool.uv.workspace]
 members = [
-    "backend",
-    "mcp_server",
-    "crawler",
-    "rag",
+    "apps/backend",
+    "apps/mcp_server",
+    "apps/crawler",
+    "apps/rag",
+    "packages/common",
 ]

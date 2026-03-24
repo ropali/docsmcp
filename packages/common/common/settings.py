@@ -1,16 +1,14 @@
-import os
 from functools import lru_cache
 
-from pydantic import Field
+from pydantic import Field, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    """Application settings/configuration class"""
+    """Shared application settings."""
 
-    STAGE: str = Field(default=os.environ.get("STAGE", "dev"))
+    STAGE: str = Field(default="dev", alias="STAGE")
 
-    # Database Settings
     POSTGRES_DATABASE_URL: str = Field(
         default="postgresql+asyncpg://myuser:mypassword@localhost:5432/postgres",
         alias="DATABASE_URL",
@@ -26,13 +24,10 @@ class Settings(BaseSettings):
         description="Redis connection string",
     )
 
-    # API Settings
     API_V1_PREFIX: str = "/api/v1"
     PROJECT_NAME: str = "DocsMCP"
-
     VERSION: str = "1.0.0"
 
-    # Logging Settings
     LOG_LEVEL: str = Field(default="INFO", alias="LOG_LEVEL")
     LOG_JSON: bool = Field(default=False, alias="LOG_JSON")
     LOG_FILE_ENABLED: bool = Field(default=False, alias="LOG_FILE_ENABLED")
@@ -41,16 +36,13 @@ class Settings(BaseSettings):
     LOG_FILE_RETENTION: str = Field(default="14 days", alias="LOG_FILE_RETENTION")
     LOG_FILE_COMPRESSION: str = Field(default="gz", alias="LOG_FILE_COMPRESSION")
 
-    # File Upload Settings
     FILE_UPLOAD_DIR: str = Field(
         default="/tmp/docsmcp_uploads",
         alias="FILE_UPLOAD_DIR",
     )
-
     UPLOAD_CHUNK_SIZE: int = 1024 * 1024
 
     STORAGE_BACKEND: str = Field(default="s3", alias="STORAGE_BACKEND")
-
     S3_BUCKET_NAME: str = Field(default="docsmcp-dev", alias="S3_BUCKET_NAME")
     S3_REGION: str = Field(default="us-east-1", alias="S3_REGION")
     S3_ENDPOINT_URL: str | None = Field(
@@ -59,12 +51,8 @@ class Settings(BaseSettings):
     )
     S3_USE_PATH_STYLE: bool = Field(default=True, alias="S3_USE_PATH_STYLE")
     AWS_ACCESS_KEY_ID: str = Field(default="test", alias="AWS_ACCESS_KEY_ID")
-    AWS_SECRET_ACCESS_KEY: str = Field(
-        default="test",
-        alias="AWS_SECRET_ACCESS_KEY",
-    )
+    AWS_SECRET_ACCESS_KEY: str = Field(default="test", alias="AWS_SECRET_ACCESS_KEY")
 
-    # CORS Settings
     CORS_ORIGINS: list[str] = Field(
         default=["http://localhost:3000"],
         alias="CORS_ORIGINS",
@@ -72,26 +60,24 @@ class Settings(BaseSettings):
     CORS_METHODS: list[str] = Field(default=["*"], alias="CORS_METHODS")
     CORS_HEADERS: list[str] = Field(default=["*"], alias="CORS_HEADERS")
 
-    # Vector DB
-    VECTOR_COLLECTION_NAME: str = "docsmcp-vectors"
+    model_config = SettingsConfigDict(
+        env_file=("apps/backend/.env", ".env"),
+        case_sensitive=True,
+    )
+
 
     @property
     def debug(self) -> bool:
         return self.STAGE == "dev"
 
-    model_config = SettingsConfigDict(
-        env_file=("backend/.env", ".env"),
-        case_sensitive=True,
-    )
+    @computed_field
+    @property
+    def VECTOR_COLLECTION_NAME(self) -> str:
+        return f"docsmcp-vectors-{self.STAGE}"
 
 
 @lru_cache
 def get_settings() -> Settings:
-    """
-    Creates and returns a cached instance of the settings.
-    Use this function to get settings throughout the application.
-    """
     return Settings()
 
-
-settings = Settings()
+settings = get_settings()

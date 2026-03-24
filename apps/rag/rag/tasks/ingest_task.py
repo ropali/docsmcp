@@ -1,9 +1,10 @@
 import asyncio
 import uuid
 
+from common.settings import settings
+from common.storage import get_storage_service
 from app.repositories import PageRepository
-from app.services import get_storage_service
-from db.session import get_db_session
+from crawler.db.session import get_db_session
 from functools import lru_cache
 from rag.splitters.text_splitter import RecursiveCharacterSplitter
 from rag.loaders import HTMLLoader
@@ -11,7 +12,6 @@ from rag.store.chroma_store import ChromaVectorStore
 from rag.embedding.embedders import LocalEmbedder
 from rag.pipeline.ingestion import IngestionPipeline
 from rag.celery_app import celery
-from app.core.settings import settings
 
 from rag.pipeline.ingestion import Page as IngestPage
 
@@ -94,4 +94,4 @@ if __name__ == "__main__":
     )
     parser.add_argument("job_id", help="Crawl job UUID to run")
     args = parser.parse_args()
-    asyncio.run(_ingest_page(args.job_id))
+    asyncio.run(_ingest_page(uuid.UUID(args.job_id)))
