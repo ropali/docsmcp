@@ -7,6 +7,7 @@ members = [
     "backend",
     "crawler",
     "docsmcp-common",
+    "docsmcp-persistence",
     "mcp-server",
     "rag",
 ]
@@ -108,6 +109,7 @@ dependencies = [
     { name = "alembic" },
     { name = "asyncpg" },
     { name = "docsmcp-common" },
+    { name = "docsmcp-persistence" },
     { name = "fastapi" },
     { name = "gunicorn" },
     { name = "orjson" },
@@ -121,6 +123,7 @@ requires-dist = [
     { name = "alembic", specifier = ">=1.18.4" },
     { name = "asyncpg", specifier = ">=0.31.0" },
     { name = "docsmcp-common", editable = "packages/common" },
+    { name = "docsmcp-persistence", editable = "packages/persistence" },
     { name = "fastapi", specifier = ">=0.135.1" },
     { name = "gunicorn", specifier = ">=25.1.0" },
     { name = "orjson", specifier = ">=3.11.7" },
@@ -422,6 +425,7 @@ dependencies = [
     { name = "beautifulsoup4" },
     { name = "celery" },
     { name = "docsmcp-common" },
+    { name = "docsmcp-persistence" },
     { name = "httpx" },
     { name = "playwright" },
     { name = "pydantic" },
@@ -433,6 +437,7 @@ requires-dist = [
     { name = "beautifulsoup4", specifier = ">=4.14.3" },
     { name = "celery", specifier = ">=5.6.2" },
     { name = "docsmcp-common", editable = "packages/common" },
+    { name = "docsmcp-persistence", editable = "packages/persistence" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "playwright", specifier = ">=1.55.0" },
     { name = "pydantic", specifier = ">=2.12.5" },
@@ -476,6 +481,21 @@ requires-dist = [
     { name = "loguru", specifier = ">=0.7.3" },
     { name = "pydantic", specifier = ">=2.12.5" },
     { name = "pydantic-settings", specifier = ">=2.13.1" },
+]
+
+[[package]]
+name = "docsmcp-persistence"
+version = "0.1.0"
+source = { editable = "packages/persistence" }
+dependencies = [
+    { name = "docsmcp-common" },
+    { name = "sqlalchemy" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "docsmcp-common", editable = "packages/common" },
+    { name = "sqlalchemy", specifier = ">=2.0.48" },
 ]
 
 [[package]]
@@ -1544,6 +1564,7 @@ source = { editable = "apps/rag" }
 dependencies = [
     { name = "chromadb" },
     { name = "docsmcp-common" },
+    { name = "docsmcp-persistence" },
     { name = "sentence-transformers" },
 ]
 
@@ -1551,6 +1572,7 @@ dependencies = [
 requires-dist = [
     { name = "chromadb", specifier = ">=1.5.5" },
     { name = "docsmcp-common", editable = "packages/common" },
+    { name = "docsmcp-persistence", editable = "packages/persistence" },
     { name = "sentence-transformers", specifier = ">=5.3.0" },
 ]
 

@@ -1,3 +1,4 @@
+from persistence.db.postgres import get_db_session
 from app.core.clients.celery import celery_client
 from common.storage import get_storage_service
 from typing import Any
@@ -6,12 +7,13 @@ import argparse
 import asyncio
 import hashlib
 
-from app.models import JobStatus, SourceStatus
-from app.repositories import PageRepository
-from app.repositories.source_repo import SourceRepository
-from app.repositories.crawl_job_repo import CrawlJobRepository
+from persistence.repositories import (
+    CrawlJobRepository,
+    PageRepository,
+    SourceRepository,
+)
+from persistence.models import JobStatus, SourceStatus
 from loguru import logger
-from crawler.db.session import get_db_session
 from crawler.pipeline.config import CrawlConfig
 from crawler.pipeline.crawler import Crawler
 

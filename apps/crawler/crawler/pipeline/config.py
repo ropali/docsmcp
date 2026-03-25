@@ -1,4 +1,4 @@
-from app.models import Source
+from persistence.models import Source
 from pydantic import BaseModel, field_validator
 
 

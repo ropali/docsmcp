@@ -1,10 +1,10 @@
+from persistence.db.postgres import get_db_session
 import asyncio
 import uuid
 
 from common.settings import settings
 from common.storage import get_storage_service
-from app.repositories import PageRepository
-from crawler.db.session import get_db_session
+from persistence.repositories import PageRepository
 from functools import lru_cache
 from rag.splitters.text_splitter import RecursiveCharacterSplitter
 from rag.loaders import HTMLLoader

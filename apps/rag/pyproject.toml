@@ -7,6 +7,7 @@ requires-python = ">=3.14"
 dependencies = [
     "chromadb>=1.5.5",
     "docsmcp-common",
+    "docsmcp-persistence",
     "sentence-transformers>=5.3.0",
 ]
 
@@ -22,3 +23,4 @@ packages = ["rag"]
 
 [tool.uv.sources]
 docsmcp-common = { workspace = true }
+docsmcp-persistence = { workspace = true }

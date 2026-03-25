@@ -1,6 +1,3 @@
-from sqlalchemy import MetaData
-from sqlalchemy.orm import declarative_base
+from persistence.models.base import Base
 
-from app.core.settings import settings
-
-Base = declarative_base(metadata=MetaData(schema=settings.POSTGRES_SCHEMA))
+__all__ = ["Base"]

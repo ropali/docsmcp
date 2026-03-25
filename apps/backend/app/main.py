@@ -13,11 +13,6 @@ from app.api.main import api_router
 from app.core.events import shutdown_db_clients, startup_db_clients
 from app.core.logging import set_logger
 
-# try:
-#     from app.metrics import setup_metrics
-# except ImportError:
-#     setup_metrics = None
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
