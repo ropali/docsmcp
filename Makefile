@@ -11,7 +11,7 @@ SERVICES := backend mcp crawler rag
 	backend mcp crawler rag \
 	backend-add backend-add-dev backend-run backend-build backend-sync backend-migrate backend-downgrade backend-revision backend-db-check \
 	mcp-add mcp-add-dev mcp-run mcp-build mcp-sync \
-	crawler-add crawler-add-dev crawler-run crawler-celery crawler-build crawler-sync \
+	crawler-add crawler-add-dev crawler-run crawler-celery crawler-build crawler-sync s3-bucket-init \
 	rag-add rag-add-dev rag-run rag-build rag-sync \
 	build-all sync-all lock clean-dist
 
@@ -38,6 +38,9 @@ help:
 	@echo ""
 	@echo "Workspace:"
 	@echo "  make build-all | make sync-all | make lock | make clean-dist"
+	@echo ""
+	@echo "Local infra:"
+	@echo "  make s3-bucket-init"
 
 # Command-style dispatcher:
 #   make backend add dep1 dep2
@@ -72,6 +75,7 @@ service-cmd:
 	    if [ "$$service" = "backend" ]; then \
 	      UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) run --package "$$pkg" uvicorn app.main:app --reload --host "$(BACKEND_HOST)" --port "$(BACKEND_PORT)"; \
 	    elif [ "$$service" = "crawler" ]; then \
+	      $(MAKE) s3-bucket-init --no-print-directory; \
 	      UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) run --package "$$pkg" celery -A crawler.celery_app:celery worker -l info -Q crawl; \
 	    elif [ "$$service" = "rag" ]; then \
 	      UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) run --package "$$pkg" celery -A rag.celery_app:celery worker -l info -Q embed --pool=solo; \
@@ -152,16 +156,19 @@ mcp-build:
 mcp-sync:
 	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) sync --package mcp-server
 
+s3-bucket-init:
+	@awslocal s3api create-bucket --bucket docsmcp-dev >/dev/null 2>&1 || true
+
 crawler-add:
 	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) add --package crawler $(DEPS)
 
 crawler-add-dev:
 	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) add --package crawler --dev $(DEPS)
 
-crawler-run:
+crawler-run: s3-bucket-init
 	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) run --package crawler crawler
 
-crawler-celery:
+crawler-celery: s3-bucket-init
 	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) run --package crawler celery -A crawler.celery_app:celery worker -l info -Q crawl
 
 crawler-build:
