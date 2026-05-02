@@ -1,6 +1,5 @@
 import asyncio
 import time
-from collections import deque
 from dataclasses import field
 from urllib.parse import urlparse
 
@@ -8,6 +7,7 @@ from pydantic.dataclasses import dataclass
 
 from crawler.pipeline.config import CrawlConfig
 from crawler.pipeline.fetchers import BaseFetcher, FetcherFactory, HttpFetcher
+from crawler.url_frontier.frontier import URLFrontier, seed_from_site_sitemap
 from crawler.utils.url_utils import (
     extract_links,
     fetch_robots_txt,
@@ -42,30 +42,28 @@ class Crawler:
     def __init__(self, config: CrawlConfig):
         self.config = config
         self._fetcher: BaseFetcher = FetcherFactory.create(config)
-        self._visited: set[str] = set()
         self._domain_last_fetch: dict[str, float] = {}
+        self._frontier = URLFrontier(max_depth=config.max_depth)
 
     async def discover_urls(self) -> list[str]:
         logger.info(f"URL discovery started from URL: {self.config.base_url}")
         robots = await fetch_robots_txt(self.config.base_url, self.config.user_agent)
 
         discovered = []
-
-        queue: deque[tuple[str, int]] = deque()
-
-        start = normalize_url(self.config.base_url)
-
-        queue.append((start, 0))
-        visited: set[str] = {start}
+        seeded_from_sitemap = await self._seed_discovery_frontier()
 
         # use http fetcher for discovry only
         fetcher = HttpFetcher(user_agent=self.config.user_agent)
 
         try:
-            while queue and len(discovered) < self.config.max_pages:
-                url, depth = queue.popleft()
+            while len(self._frontier) and len(discovered) < self.config.max_pages:
+                item = await self._frontier.pop()
+                if item is None:
+                    break
 
-                logger.info("Visiting URL: {url}")
+                url, depth = item.url, item.depth
+
+                logger.info(f"Visiting URL: {url}")
 
                 if not robots.can_fetch(self.config.user_agent, url):
                     continue
@@ -74,16 +72,16 @@ class Crawler:
                 html = await fetcher.fetch(url, self.config.request_timeout)
 
                 if html is None:
-                    logger.info("HTML content not found for URL: {url}")
+                    logger.info(f"HTML content not found for URL: {url}")
                     continue
 
                 discovered.append(url)
 
-                if depth < self.config.max_depth:
+                if not seeded_from_sitemap and depth < self.config.max_depth:
                     for child_url in self._filter_urls(extract_links(html, url)):
-                        if child_url not in visited:
-                            visited.add(child_url)
-                            queue.append((child_url, depth + 1))
+                        await self._frontier.push(
+                            child_url, depth=depth + 1, metadata={}
+                        )
 
         finally:
             await fetcher.close()
@@ -95,18 +93,15 @@ class Crawler:
         robots = await fetch_robots_txt(self.config.base_url, self.config.user_agent)
 
         result = CrawlResult()
-
-        queue: deque[tuple[str, int]] = deque()
-
-        normalized_url = normalize_url(self.config.base_url)
-
-        queue.append((normalized_url, 0))
-
-        self._visited.add(normalized_url)
+        seeded_from_sitemap = await self._seed_discovery_frontier()
 
         try:
-            while queue and len(result.pages) < self.config.max_pages:
-                url, depth = queue.popleft()
+            while len(self._frontier) and len(result.pages) < self.config.max_pages:
+                item = await self._frontier.pop()
+                if item is None:
+                    break
+
+                url, depth = item.url, item.depth
 
                 logger.info(f"Crawling URL: {url}")
 
@@ -126,13 +121,14 @@ class Crawler:
 
                 result.pages.append(CrawlPage(url, html, depth))
 
-                # Discover child links only if we haven't hit max depth
-                if depth < self.config.max_depth:
+                # When sitemap discovery succeeds, the sitemap already defines the crawl set.
+                if not seeded_from_sitemap and depth < self.config.max_depth:
                     child_urls = self._filter_urls(extract_links(html, url))
 
                     for child_url in child_urls:
-                        self._visited.add(child_url)
-                        queue.append((child_url, depth + 1))
+                        await self._frontier.push(
+                            child_url, depth=depth + 1, metadata={}
+                        )
         except Exception as e:
             logger.error(f"Crawler Error: {e}")
             raise e
@@ -141,6 +137,32 @@ class Crawler:
             await self._fetcher.close()
 
         return result
+
+    async def _seed_discovery_frontier(self) -> bool:
+        self._frontier = URLFrontier(max_depth=self.config.max_depth)
+
+        accepted, sitemap_urls = await seed_from_site_sitemap(
+            self._frontier,
+            self.config.base_url,
+            self.config.user_agent,
+        )
+
+        if accepted > 0:
+            logger.info(
+                "Seeded frontier with %d URLs from sitemap(s): %s",
+                accepted,
+                ", ".join(sitemap_urls),
+            )
+            return True
+
+        logger.info(
+            "No sitemap URLs discovered for %s. Falling back to manual crawl discovery.",
+            self.config.base_url,
+        )
+        await self._frontier.push(
+            normalize_url(self.config.base_url), depth=0, metadata={}
+        )
+        return False
 
     def _filter_urls(self, urls: list[str]) -> list[str]:
         """
