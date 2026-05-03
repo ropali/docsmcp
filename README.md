@@ -9,6 +9,7 @@ This repository uses a `uv` workspace with independently deployable apps and a s
 - `apps/mcp_server`
 - `apps/crawler`
 - `apps/rag`
+- `apps/frontend`
 - `packages/common`
 
 ## Architecture
@@ -101,6 +102,14 @@ Variable-style aliases:
 make backend-add DEPS="httpx redis"
 make mcp-add-dev DEPS="pytest"
 make crawler-build
+```
+
+Frontend:
+
+```bash
+make frontend install
+make frontend run
+make frontend build
 ```
 
 ## Backend migrations (Alembic)

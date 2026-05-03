@@ -128,7 +128,7 @@ async def urls_from_sitemap(
     try:
         root = ET.fromstring(text)
     except ET.ParseError as exc:
-        logger.error("Sitemap XML parse error at %s: %s", sitemap_url, exc)
+        logger.error(f"Sitemap XML parse error at {sitemap_url}: {exc}")
         return []
 
     ns_match = re.match(r"\{(.*?)\}", root.tag)
@@ -154,9 +154,7 @@ async def seed_from_sitemap(
     """Fetch sitemap and push all URLs into the frontier at depth=0."""
     urls = await urls_from_sitemap(sitemap_url, session)
     accepted = sum([await frontier.push(u, depth=0, metadata={}) for u in urls])
-    logger.info(
-        "Sitemap seeding: %d/%d URLs accepted from %s", accepted, len(urls), sitemap_url
-    )
+    logger.info(f"Sitemap seeding: {accepted}/{len(urls)} URLs accepted from sitemap")
     return accepted
 
 

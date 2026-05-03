@@ -5,14 +5,15 @@ UV_CACHE_DIR ?= /tmp/uv-cache
 BACKEND_HOST ?= 127.0.0.1
 BACKEND_PORT ?= 8000
 
-SERVICES := backend mcp crawler rag
+SERVICES := backend mcp crawler rag frontend
 
 .PHONY: help \
-	backend mcp crawler rag \
+	backend mcp crawler rag frontend \
 	backend-add backend-add-dev backend-run backend-build backend-sync backend-migrate backend-downgrade backend-revision backend-db-check \
 	mcp-add mcp-add-dev mcp-run mcp-build mcp-sync \
 	crawler-add crawler-add-dev crawler-run crawler-celery crawler-build crawler-sync s3-bucket-init \
 	rag-add rag-add-dev rag-run rag-build rag-sync \
+	frontend-install frontend-run frontend-build \
 	build-all sync-all lock clean-dist
 
 help:
@@ -30,7 +31,7 @@ help:
 	@echo "  make backend db-check"
 	@echo "  make backend run BACKEND_HOST=0.0.0.0 BACKEND_PORT=8080"
 	@echo ""
-	@echo "Supported services: backend, mcp, crawler, rag"
+	@echo "Supported services: backend, mcp, crawler, rag, frontend"
 	@echo ""
 	@echo "Explicit aliases (variable-style):"
 	@echo "  make backend-add DEPS='httpx redis'"
@@ -47,7 +48,7 @@ help:
 #   make mcp build
 #   make crawler run
 #   make rag add openai qdrant-client
-backend mcp crawler rag:
+backend mcp crawler rag frontend:
 	@$(MAKE) service-cmd SERVICE=$@ ARGS="$(filter-out $@,$(MAKECMDGOALS))" --no-print-directory
 
 .PHONY: service-cmd
@@ -59,12 +60,16 @@ service-cmd:
 	  mcp) pkg="mcp-server" ;; \
 	  crawler) pkg="crawler" ;; \
 	  rag) pkg="rag" ;; \
+	  frontend) pkg="frontend" ;; \
 	  *) echo "Unknown service: $$service"; exit 1 ;; \
 	esac; \
 	set -- $(ARGS); \
 	action="$${1:-help}"; \
 	if [ "$$#" -gt 0 ]; then shift; fi; \
 	case "$$action" in \
+	  install) \
+	    [ "$$service" = "frontend" ] || { echo "Action '$$action' is only supported for frontend"; exit 1; }; \
+	    cd apps/frontend && npm install ;; \
 	  add) \
 	    [ "$$#" -gt 0 ] || { echo "Usage: make $$service add <dep...>"; exit 1; }; \
 	    UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) add --package "$$pkg" "$$@" ;; \
@@ -72,7 +77,9 @@ service-cmd:
 	    [ "$$#" -gt 0 ] || { echo "Usage: make $$service add-dev <dep...>"; exit 1; }; \
 	    UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) add --package "$$pkg" --dev "$$@" ;; \
 	  run) \
-	    if [ "$$service" = "backend" ]; then \
+	    if [ "$$service" = "frontend" ]; then \
+	      cd apps/frontend && npm run dev; \
+	    elif [ "$$service" = "backend" ]; then \
 	      UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) run --package "$$pkg" uvicorn app.main:app --reload --host "$(BACKEND_HOST)" --port "$(BACKEND_PORT)"; \
 	    elif [ "$$service" = "crawler" ]; then \
 	      $(MAKE) s3-bucket-init --no-print-directory; \
@@ -84,7 +91,11 @@ service-cmd:
 	      UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) run --package "$$pkg" "$$cmd"; \
 	    fi ;; \
 	  build) \
-	    UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) build --package "$$pkg" ;; \
+	    if [ "$$service" = "frontend" ]; then \
+	      cd apps/frontend && npm run build; \
+	    else \
+	      UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) build --package "$$pkg"; \
+	    fi ;; \
 	  sync) \
 	    UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) sync --package "$$pkg" ;; \
 	  migrate) \
@@ -192,11 +203,21 @@ rag-build:
 rag-sync:
 	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) sync --package rag
 
+frontend-install:
+	@cd apps/frontend && npm install
+
+frontend-run:
+	@cd apps/frontend && npm run dev
+
+frontend-build:
+	@cd apps/frontend && npm run build
+
 build-all:
 	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) build --package backend
 	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) build --package mcp-server
 	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) build --package crawler
 	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) build --package rag
+	@cd apps/frontend && npm run build
 
 sync-all:
 	@UV_CACHE_DIR="$(UV_CACHE_DIR)" $(UV) sync --package backend

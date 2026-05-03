@@ -105,108 +105,109 @@ async def refresh_source_by_id(id: uuid.UUID, repo: CrawlJobRepoDep):
     )
 
 
-@source_router.post(
-    "/upload",
-    response_model=JSONResponse,
-    openapi_extra={
-        "requestBody": {
-            "required": True,
-            "content": {
-                "multipart/form-data": {
-                    "schema": {
-                        "type": "object",
-                        "required": ["source_id", "files"],
-                        "properties": {
-                            "source_id": {
-                                "type": "string",
-                                "format": "uuid",
-                                "description": "Existing source ID to attach files to",
-                            },
-                            "files": {
-                                "type": "array",
-                                "items": {"type": "string", "format": "binary"},
-                                "description": "One or more files to upload",
-                            },
-                        },
-                    }
-                }
-            },
-        }
-    },
-)
-async def upload_source_files(
-    source_id: Annotated[uuid.UUID, Form(...)],
-    files: Annotated[
-        list[UploadFile],
-        File(
-            ...,
-            description="One or more files to upload",
-            media_type="multipart/form-data",
-        ),
-    ],
-    repo: SourceRepoDep,
-    page_repo: PageRepoDep,
-    crawl_job_repo: CrawlJobRepoDep,
-) -> JSONResponse:
-    source = await repo.get_by_id(source_id=source_id)
-    if not source:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Source not found."
-        )
-    if source.source_type != SourceType.FILE:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Uploads are only supported for FILE-type sources.",
-        )
-
-    valid_files = [f for f in files if f.filename]
-    if not valid_files:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="No files were provided."
-        )
-
-    storage = get_storage_service()
-    uploaded_files: list[dict] = []
-
-    for file in valid_files:
-        original_name = (
-            (file.filename or "upload.bin").rsplit("/", 1)[-1].rsplit("\\", 1)[-1]
-        )
-        stored_name = f"{uuid.uuid4()}_{original_name}"
-        object_key = f"sources/{source.id}/{stored_name}"
-        size, content_hash, file_uri = await _upload_file_to_storage(
-            file, object_key, storage
-        )
-
-        page = await page_repo.create(
-            source_id=source.id,
-            title=original_name,
-            file_path=file_uri,
-            content_hash=content_hash,
-        )
-        uploaded_files.append(
-            {
-                "file_id": page.id,
-                "filename": original_name,
-                "file_path": file_uri,
-                "size": size,
-            }
-        )
-
-    await repo.update_progress(
-        source,
-        page_count=source.page_count + len(uploaded_files),
-        status=SourceStatus.PROCESSING,
-    )
-
-    await crawl_job_repo.create(source_id=source.id)
-    # TODO: Send this job to celery queue
-
-    return JSONResponse(
-        status=status.HTTP_201_CREATED,
-        message="Files uploaded and linked to source.",
-        data={"source_id": source.id, "files": uploaded_files},
-    )
+# @source_router.post(
+#     "/upload",
+#     response_model=JSONResponse,
+#     openapi_extra={
+#         "requestBody": {
+#             "required": True,
+#             "content": {
+#                 "multipart/form-data": {
+#                     "schema": {
+#                         "type": "object",
+#                         "required": ["source_id", "files"],
+#                         "properties": {
+#                             "source_id": {
+#                                 "type": "string",
+#                                 "format": "uuid",
+#                                 "description": "Existing source ID to attach files to",
+#                             },
+#                             "files": {
+#                                 "type": "array",
+#                                 "items": {"type": "string", "format": "binary"},
+#                                 "description": "One or more files to upload",
+#                             },
+#                         },
+#                     }
+#                 }
+#             },
+#         }
+#     },
+# )
+# async def upload_source_files(
+#     source_id: Annotated[uuid.UUID, Form(...)],
+#     files: Annotated[
+#         list[UploadFile],
+#         File(
+#             ...,
+#             description="One or more files to upload",
+#             media_type="multipart/form-data",
+#         ),
+#     ],
+#     repo: SourceRepoDep,
+#     page_repo: PageRepoDep,
+#     crawl_job_repo: CrawlJobRepoDep,
+# ) -> JSONResponse:
+#     source = await repo.get_by_id(source_id=source_id)
+#     if not source:
+#         raise HTTPException(
+#             status_code=status.HTTP_404_NOT_FOUND, detail="Source not found."
+#         )
+#     if source.source_type != SourceType.FILE:
+#         raise HTTPException(
+#             status_code=status.HTTP_400_BAD_REQUEST,
+#             detail="Uploads are only supported for FILE-type sources.",
+#         )
+#
+#     valid_files = [f for f in files if f.filename]
+#     if not valid_files:
+#         raise HTTPException(
+#             status_code=status.HTTP_400_BAD_REQUEST, detail="No files were provided."
+#         )
+#
+#     storage = get_storage_service()
+#     uploaded_files: list[dict] = []
+#
+#     for file in valid_files:
+#         original_name = (
+#             (file.filename or "upload.bin").rsplit("/", 1)[-1].rsplit("\\", 1)[-1]
+#         )
+#         stored_name = f"{uuid.uuid4()}_{original_name}"
+#         object_key = f"sources/{source.id}/{stored_name}"
+#         size, content_hash, file_uri = await _upload_file_to_storage(
+#             file, object_key, storage
+#         )
+#
+#         page = await page_repo.create(
+#             source_id=source.id,
+#             title=original_name,
+#             file_path=file_uri,
+#             content_hash=content_hash,
+#         )
+#         uploaded_files.append(
+#             {
+#                 "file_id": page.id,
+#                 "filename": original_name,
+#                 "file_path": file_uri,
+#                 "size": size,
+#             }
+#         )
+#
+#     await repo.update_progress(
+#         source,
+#         page_count=source.page_count + len(uploaded_files),
+#         status=SourceStatus.PROCESSING,
+#     )
+#
+#     await crawl_job_repo.create(source_id=source.id)
+#     # TODO: Send this job to celery queue
+#
+#     return JSONResponse(
+#         status=status.HTTP_201_CREATED,
+#         message="Files uploaded and linked to source.",
+#         data={"source_id": source.id, "files": uploaded_files},
+#     )
+#
 
 
 @source_router.get("/{id:uuid}/files")
