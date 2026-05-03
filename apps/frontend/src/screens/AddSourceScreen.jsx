@@ -1,7 +1,8 @@
-import { useMemo, useState } from "react";
-import { createSource } from "../api";
+import { useEffect, useMemo, useState } from "react";
+import { createSource, getSource, updateSource } from "../api";
 import Icon from "../components/Icon";
 import { readinessChecks, pipelineLogs } from "../data/mockData";
+import { buildSourceConfig, parseConfigForForm } from "../utils";
 
 const protocolOptions = [
   { label: "HTTPS / REST API", value: "URL" },
@@ -10,21 +11,81 @@ const protocolOptions = [
   { label: "Git Repository", value: "UNSUPPORTED" },
 ];
 
-export default function AddSourceScreen({ onSourceCreated }) {
-  const [form, setForm] = useState({
-    name: "",
-    source_type: "URL",
-    base_url: "",
-    protocol: "HTTPS / REST API",
-  });
+
+
+const emptyForm = {
+  name: "",
+  source_type: "URL",
+  base_url: "",
+  protocol: "HTTPS / REST API",
+  crawlSubdomains: false,
+  exclusionPatterns: "",
+  advancedJson: "{}",
+};
+
+function getProtocolLabel(sourceType) {
+  if (sourceType === "URL") {
+    return "HTTPS / REST API";
+  }
+  return "HTTPS / REST API";
+}
+
+export default function AddSourceScreen({ sourceId = null, onSourceCreated, onSourceUpdated }) {
+  const [form, setForm] = useState(emptyForm);
+  const [loadingSource, setLoadingSource] = useState(Boolean(sourceId));
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const isEditing = Boolean(sourceId);
 
   const selectedProtocol = useMemo(
     () => protocolOptions.find((option) => option.label === form.protocol) || protocolOptions[0],
     [form.protocol],
   );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadSource() {
+      if (!sourceId) {
+        setForm(emptyForm);
+        setLoadingSource(false);
+        return;
+      }
+
+      setLoadingSource(true);
+      setMessage("");
+      setError("");
+
+      try {
+        const source = await getSource(sourceId);
+        if (!cancelled) {
+          const parsedConfig = parseConfigForForm(source.config);
+          setForm({
+            name: source.name || "",
+            source_type: source.source_type || "URL",
+            base_url: source.base_url || "",
+            protocol: getProtocolLabel(source.source_type),
+            ...parsedConfig,
+          });
+        }
+      } catch (loadError) {
+        if (!cancelled) {
+          setError(loadError.message);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingSource(false);
+        }
+      }
+    }
+
+    loadSource();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [sourceId]);
 
   return (
     <>
@@ -33,11 +94,13 @@ export default function AddSourceScreen({ onSourceCreated }) {
           <div className="breadcrumbs">
             <span>Sources</span>
             <Icon name="chevron_right" className="tinyIcon" />
-            <span className="current">New Connection</span>
+            <span className="current">{isEditing ? "Edit Connection" : "New Connection"}</span>
           </div>
-          <h2 className="pageTitle">Add New Source</h2>
+          <h2 className="pageTitle">{isEditing ? "Edit Source" : "Add New Source"}</h2>
           <p className="pageDescription">
-            Connect a new external knowledge base, API endpoint, or local documentation directory to the DocsMCP index for real-time semantic search and context injection.
+            {isEditing
+              ? "Update the source endpoint and operational config used by the DocsMCP ingestion pipeline."
+              : "Connect a new external knowledge base, API endpoint, or local documentation directory to the DocsMCP index for real-time semantic search and context injection."}
           </p>
         </div>
       </section>
@@ -57,21 +120,50 @@ export default function AddSourceScreen({ onSourceCreated }) {
                 setMessage("");
                 setError("");
 
+                if (loadingSource) {
+                  return;
+                }
+
                 if (selectedProtocol.value === "UNSUPPORTED") {
                   setError("This protocol is not supported by the current backend APIs.");
                   return;
                 }
 
+
+
+                let config;
+                try {
+                  config = buildSourceConfig(form);
+                  // Remove auth and sync frequency options from create/edit payload
+                  // These are managed by the backend or defaults and should not be set from the form
+                  delete config.sync_frequency;
+                  delete config.auth;
+                } catch (configError) {
+                  setError(configError.message);
+                  return;
+                }
+
                 setSubmitting(true);
                 try {
-                  const response = await createSource({
-                    name: form.name,
-                    source_type: selectedProtocol.value,
-                    base_url: form.base_url,
-                  });
-                  setMessage(response.message || "Source created.");
+                  const response = isEditing
+                    ? await updateSource(sourceId, {
+                        name: form.name,
+                        base_url: form.base_url,
+                        config,
+                      })
+                    : await createSource({
+                        name: form.name,
+                        source_type: selectedProtocol.value,
+                        base_url: form.base_url,
+                        config,
+                      });
+                  setMessage(response.message || (isEditing ? "Source updated." : "Source created."));
                   if (response?.data?.id) {
-                    onSourceCreated(response.data.id, response.data.name);
+                    if (isEditing) {
+                      onSourceUpdated?.(response.data.id, response.data.name);
+                    } else {
+                      onSourceCreated?.(response.data.id, response.data.name);
+                    }
                   }
                 } catch (submitError) {
                   setError(submitError.message);
@@ -84,6 +176,7 @@ export default function AddSourceScreen({ onSourceCreated }) {
                 <label className="field">
                   <span>Source Name</span>
                   <input
+                    disabled={loadingSource}
                     placeholder="e.g., AWS SDK Documentation"
                     type="text"
                     value={form.name}
@@ -95,6 +188,7 @@ export default function AddSourceScreen({ onSourceCreated }) {
                 <label className="field">
                   <span>Protocol</span>
                   <select
+                    disabled={isEditing}
                     value={form.protocol}
                     onChange={(event) => {
                       const option = protocolOptions.find(
@@ -119,6 +213,7 @@ export default function AddSourceScreen({ onSourceCreated }) {
                 <div className="fieldIconWrap">
                   <Icon name="link" className="fieldIcon" />
                   <input
+                    disabled={loadingSource}
                     placeholder="https://docs.api.example.com/v1"
                     type="url"
                     value={form.base_url}
@@ -129,46 +224,96 @@ export default function AddSourceScreen({ onSourceCreated }) {
                 </div>
               </label>
 
+
+
+
+
               <div className="formGrid">
-                <div className="field">
-                  <span>Sync Frequency</span>
-                  <div className="segmentedRow">
-                    <button type="button" className="segmentButton">REALTIME</button>
-                    <button type="button" className="segmentButton active">HOURLY</button>
-                    <button type="button" className="segmentButton">DAILY</button>
-                  </div>
-                </div>
+                <label className="field">
+                  <span>Exclusion Patterns</span>
+                  <textarea
+                    className="configTextarea"
+                    disabled={loadingSource}
+                    placeholder={"/blog/*\n/v1/*\n/deprecated/*"}
+                    rows={5}
+                    value={form.exclusionPatterns}
+                    onChange={(event) =>
+                      setForm((current) => ({
+                        ...current,
+                        exclusionPatterns: event.target.value,
+                      }))
+                    }
+                  />
+                </label>
 
                 <div className="field">
-                  <span>Authentication</span>
-                  <div className="authCard">
-                    <Icon name="key" className="fieldIcon" />
-                    <span>Bearer Token Required</span>
-                    <button type="button" className="textAction">Configure</button>
-                  </div>
+                  <span>Crawl Scope</span>
+                  <label className="toggleRow interactiveToggle">
+                    <input
+                      checked={form.crawlSubdomains}
+                      disabled={loadingSource}
+                      type="checkbox"
+                      onChange={(event) =>
+                        setForm((current) => ({
+                          ...current,
+                          crawlSubdomains: event.target.checked,
+                        }))
+                      }
+                    />
+                    <span className={`toggle ${form.crawlSubdomains ? "active" : ""}`}>
+                      <span className="toggleKnob" />
+                    </span>
+                    <span>Crawl subdomains</span>
+                  </label>
                 </div>
               </div>
+
+              <article className="collapseCard advancedSettingsCard staticCard">
+                <div className="collapseHead">
+                  <div className="inlineGroup">
+                    <Icon name="settings_input_component" />
+                    <span>Advanced Config JSON</span>
+                  </div>
+                </div>
+                <p className="configHelpText">
+                  Provide additional JSON config for extraction, schema mapping, or source-specific crawler options. Structured fields above always override conflicting keys.
+                </p>
+                <label className="field">
+                  <span>Extra Config</span>
+                  <textarea
+                    className="configTextarea codeTextarea"
+                    disabled={loadingSource}
+                    placeholder={'{\n  "headers": {\n    "X-Docs-Env": "staging"\n  },\n  "schema_mapping": {\n    "title": "h1"\n  }\n}'}
+                    rows={10}
+                    value={form.advancedJson}
+                    onChange={(event) =>
+                      setForm((current) => ({ ...current, advancedJson: event.target.value }))
+                    }
+                  />
+                </label>
+              </article>
 
               <div className="formFooter">
-                <button type="button" className="secondaryButton">Test Connection</button>
-                <button type="submit" className="primaryButton" disabled={submitting}>
+                <button type="button" className="secondaryButton" disabled={loadingSource || submitting}>
+                  Test Connection
+                </button>
+                <button type="submit" className="primaryButton" disabled={loadingSource || submitting}>
                   <Icon name="rocket_launch" />
-                  <span>{submitting ? "Initializing..." : "Initialize Source"}</span>
+                  <span>
+                    {submitting
+                      ? isEditing
+                        ? "Saving..."
+                        : "Initializing..."
+                      : isEditing
+                        ? "Save Changes"
+                        : "Initialize Source"}
+                  </span>
                 </button>
               </div>
+              {loadingSource ? <div className="inlineNotice">Loading source configuration...</div> : null}
               {message ? <div className="inlineNotice successNotice">{message}</div> : null}
               {error ? <div className="inlineNotice errorNotice">{error}</div> : null}
             </form>
-          </article>
-
-          <article className="collapseCard advancedSettingsCard">
-            <div className="collapseHead">
-              <div className="inlineGroup">
-                <Icon name="settings_input_component" />
-                <span>Advanced Extraction &amp; Schema Mapping</span>
-              </div>
-              <Icon name="expand_more" />
-            </div>
           </article>
         </div>
 
