@@ -3,7 +3,7 @@ import Icon from "./Icon";
 export default function Topbar({ currentScreen, onNavigate, health, detailTitle }) {
   const isDashboard = currentScreen === "dashboard";
   const isDetail = currentScreen === "source-detail";
-  const isAdd = currentScreen === "add-source";
+  const isAdd = currentScreen === "add-source" || currentScreen === "edit-source";
 
   return (
     <header className={`topbar ${isDetail ? "detailTopbar" : ""} ${isDashboard ? "dashboardTopbar" : ""}`}>

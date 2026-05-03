@@ -12,6 +12,7 @@ export default function App() {
   const [screen, setScreen] = useState("dashboard");
   const [selectedSourceId, setSelectedSourceId] = useState(null);
   const [selectedSourceName, setSelectedSourceName] = useState("");
+  const [editingSourceId, setEditingSourceId] = useState(null);
   const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
@@ -69,6 +70,12 @@ export default function App() {
         setSelectedSourceName(sourceName);
         setScreen("source-detail");
       }}
+      onEditSource={(sourceId, sourceName) => {
+        setSelectedSourceId(sourceId);
+        setSelectedSourceName(sourceName);
+        setEditingSourceId(sourceId);
+        setScreen("edit-source");
+      }}
       reloadToken={reloadToken}
     />
   );
@@ -79,6 +86,22 @@ export default function App() {
         onSourceCreated={(sourceId, sourceName) => {
           setSelectedSourceId(sourceId);
           setSelectedSourceName(sourceName);
+          setEditingSourceId(null);
+          setReloadToken((current) => current + 1);
+          setScreen("source-detail");
+        }}
+      />
+    );
+  }
+
+  if (screen === "edit-source") {
+    content = (
+      <AddSourceScreen
+        sourceId={editingSourceId}
+        onSourceUpdated={(sourceId, sourceName) => {
+          setSelectedSourceId(sourceId);
+          setSelectedSourceName(sourceName);
+          setEditingSourceId(null);
           setReloadToken((current) => current + 1);
           setScreen("source-detail");
         }}
@@ -94,6 +117,12 @@ export default function App() {
         onRefresh={() => setReloadToken((current) => current + 1)}
         onSourceLoaded={(source) => {
           setSelectedSourceName(source.name);
+        }}
+        onEditSource={(sourceId, sourceName) => {
+          setSelectedSourceId(sourceId);
+          setSelectedSourceName(sourceName);
+          setEditingSourceId(sourceId);
+          setScreen("edit-source");
         }}
       />
     );

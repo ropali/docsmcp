@@ -6,13 +6,16 @@ import StatCard from "../components/StatCard";
 import { detailLogs } from "../data/mockData";
 import {
   formatNumber,
+  getAuthModeLabel,
   getPageStatusLabel,
   getPathLabel,
+  getSourceConfig,
   getSourceStatusLabel,
   getSourceStatusTone,
+  getSyncFrequencyLabel,
 } from "../utils";
 
-export default function SourceDetailScreen({ sourceId, reloadToken, onRefresh, onSourceLoaded }) {
+export default function SourceDetailScreen({ sourceId, reloadToken, onRefresh, onSourceLoaded, onEditSource }) {
   const [source, setSource] = useState(null);
   const [pages, setPages] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -98,6 +101,16 @@ export default function SourceDetailScreen({ sourceId, reloadToken, onRefresh, o
     ];
   }, [pages, source]);
 
+  const sourceConfig = useMemo(() => getSourceConfig(source?.config), [source?.config]);
+  const extraConfig = useMemo(() => {
+    const rest = { ...sourceConfig };
+    delete rest.sync_frequency;
+    delete rest.auth;
+    delete rest.crawl_subdomains;
+    delete rest.exclusion_patterns;
+    return rest;
+  }, [sourceConfig]);
+
   return (
     <>
       <section className="detailHero sourceViewHero">
@@ -130,7 +143,17 @@ export default function SourceDetailScreen({ sourceId, reloadToken, onRefresh, o
               <Icon name="refresh" />
               <span>Re-index</span>
             </button>
-            <button type="button" className="primaryButton">
+            <button
+              type="button"
+              className="primaryButton"
+              disabled={!sourceId}
+              onClick={() => {
+                if (!sourceId || !source) {
+                  return;
+                }
+                onEditSource(sourceId, source.name);
+              }}
+            >
               <Icon name="edit" />
               <span>Edit Source</span>
             </button>
@@ -242,31 +265,43 @@ export default function SourceDetailScreen({ sourceId, reloadToken, onRefresh, o
             <div className="configStack">
               <label className="field">
                 <span>Sync Frequency</span>
-                <select defaultValue="Every 6 Hours">
-                  <option>Every 6 Hours</option>
-                  <option>Daily at 00:00 UTC</option>
-                  <option>Weekly</option>
-                  <option>Manual Only</option>
-                </select>
+                <div className="readOnlyValue">{getSyncFrequencyLabel(sourceConfig.sync_frequency)}</div>
+              </label>
+
+              <label className="field">
+                <span>Authentication</span>
+                <div className="readOnlyValue">
+                  {getAuthModeLabel(sourceConfig.auth?.mode)}
+                  {sourceConfig.auth?.mode === "bearer" && sourceConfig.auth?.bearer_token
+                    ? " configured"
+                    : ""}
+                </div>
               </label>
 
               <div className="field">
                 <span>Exclusion Patterns</span>
                 <div className="codeBlock">
-                  /blog/*
-                  <br />
-                  /v1/*
-                  <br />
-                  /deprecated/*
+                  {Array.isArray(sourceConfig.exclusion_patterns) && sourceConfig.exclusion_patterns.length > 0
+                    ? sourceConfig.exclusion_patterns.join("\n")
+                    : "No exclusion patterns configured."}
                 </div>
               </div>
 
               <label className="toggleRow">
-                <span className="toggle">
+                <span className={`toggle ${sourceConfig.crawl_subdomains ? "active" : ""}`}>
                   <span className="toggleKnob" />
                 </span>
-                <span>Crawl subdomains</span>
+                <span>{sourceConfig.crawl_subdomains ? "Crawl subdomains enabled" : "Crawl subdomains disabled"}</span>
               </label>
+
+              <div className="field">
+                <span>Advanced Config JSON</span>
+                <div className="codeBlock">
+                  {Object.keys(extraConfig).length > 0
+                    ? JSON.stringify(extraConfig, null, 2)
+                    : "{}"}
+                </div>
+              </div>
             </div>
           </article>
 

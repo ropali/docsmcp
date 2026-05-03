@@ -9,7 +9,7 @@ from fastapi import APIRouter, File, Form, HTTPException, UploadFile, status
 from app.models import SourceStatus, SourceType
 from app.schemas.generic import JSONResponse
 from app.api.deps import PageRepoDep, SourceRepoDep, CrawlJobRepoDep
-from app.schemas.source import SourceResponse, SourceCreate, SourceCreateResponse
+from app.schemas.source import SourceResponse, SourceCreate, SourceCreateResponse, SourceUpdate
 from app.services.storage import StorageService, get_storage_service
 
 
@@ -71,6 +71,30 @@ async def create_new_source(
     return SourceCreateResponse(
         status=status.HTTP_201_CREATED,
         message="source created.",
+        data=SourceResponse.model_construct(response),
+    )
+
+
+@source_router.patch("/{id:uuid}", response_model=SourceCreateResponse)
+async def update_source_by_id(
+    id: uuid.UUID, source: SourceUpdate, repo: SourceRepoDep
+):
+    existing = await repo.get_by_id(source_id=id)
+    if not existing:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Source not found."
+        )
+
+    response = await repo.update(
+        existing,
+        name=source.name,
+        base_url=source.base_url,
+        config=source.config,
+    )
+
+    return SourceCreateResponse(
+        status=status.HTTP_200_OK,
+        message="source updated.",
         data=SourceResponse.model_construct(response),
     )
 

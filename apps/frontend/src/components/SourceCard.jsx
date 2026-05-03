@@ -1,6 +1,6 @@
 import Icon from "./Icon";
 
-export default function SourceCard({ source, onOpenDetail, onRefresh }) {
+export default function SourceCard({ source, onOpenDetail, onRefresh, onEdit }) {
   const syncing = Boolean(source.progress);
 
   return (
@@ -40,6 +40,7 @@ export default function SourceCard({ source, onOpenDetail, onRefresh }) {
             className="iconButton subtleIcon"
             onClick={(event) => {
               event.stopPropagation();
+              onEdit?.();
             }}
           >
             <Icon name="edit" />

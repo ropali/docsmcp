@@ -2,7 +2,7 @@ import Icon from "./Icon";
 import { navItems, supportItems } from "../data/mockData";
 
 export default function Sidebar({ currentScreen, onNavigate }) {
-  const currentNav = ["dashboard", "add-source", "source-detail"].includes(currentScreen)
+  const currentNav = ["dashboard", "add-source", "edit-source", "source-detail"].includes(currentScreen)
     ? "sources"
     : currentScreen;
   const isDashboard = currentScreen === "dashboard";

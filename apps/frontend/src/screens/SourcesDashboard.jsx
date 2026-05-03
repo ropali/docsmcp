@@ -13,7 +13,7 @@ import {
   getSourceTypeBadge,
 } from "../utils";
 
-export default function SourcesDashboard({ onNavigate, onSelectSource, reloadToken }) {
+export default function SourcesDashboard({ onNavigate, onSelectSource, onEditSource, reloadToken }) {
   const [sources, setSources] = useState([]);
   const [sourcePages, setSourcePages] = useState({});
   const [loading, setLoading] = useState(true);
@@ -117,6 +117,9 @@ export default function SourcesDashboard({ onNavigate, onSelectSource, reloadTok
         <div>
           <div className="eyebrowLine">Workspace / Documentation</div>
           <h2 className="pageTitle">Sources Dashboard</h2>
+          <p className="pageDescription dashboardDescription">
+            Track source health, indexing coverage, and ingestion activity from one place.
+          </p>
         </div>
         <div className="headerActions">
           <button type="button" className="primaryButton" onClick={() => onNavigate("add-source")}>
@@ -130,7 +133,7 @@ export default function SourcesDashboard({ onNavigate, onSelectSource, reloadTok
         </div>
       </section>
 
-      <section className="statsGrid fourUp">
+      <section className="statsGrid fourUp dashboardStats">
         {stats.map((stat) => (
           <StatCard key={stat.label} {...stat} />
         ))}
@@ -139,7 +142,12 @@ export default function SourcesDashboard({ onNavigate, onSelectSource, reloadTok
       <section className="dashboardGrid">
         <div className="dashboardMain">
           <div className="sectionHeader">
-            <h3>Active Sources</h3>
+            <div className="dashboardSectionIntro">
+              <h3>Active Sources</h3>
+              <p className="dashboardSectionMeta">
+                {loading ? "Refreshing source inventory..." : `${formatNumber(cards.length)} sources currently connected`}
+              </p>
+            </div>
             <div className="viewToggle">
               <button type="button" className="iconButton subtleIcon">
                 <Icon name="grid_view" />
@@ -150,7 +158,7 @@ export default function SourcesDashboard({ onNavigate, onSelectSource, reloadTok
             </div>
           </div>
 
-          <div className="stack">
+          <div className="stack sourceCardGrid">
             {loading ? <div className="inlineNotice">Loading sources...</div> : null}
             {error ? <div className="inlineNotice errorNotice">{error}</div> : null}
             {!loading && !error && cards.length === 0 ? (
@@ -162,6 +170,7 @@ export default function SourcesDashboard({ onNavigate, onSelectSource, reloadTok
                     key={source.id}
                     source={source}
                     onOpenDetail={() => onSelectSource(source.id, source.name)}
+                    onEdit={() => onEditSource(source.id, source.name)}
                     onRefresh={async () => {
                       await refreshSource(source.id);
                       setLocalReloadToken((current) => current + 1);
@@ -179,10 +188,13 @@ export default function SourcesDashboard({ onNavigate, onSelectSource, reloadTok
 
       <section className="pipelineCard">
         <div className="sectionHeader">
-          <h3 className="withIcon">
-            <Icon name="account_tree" className="accentIcon" />
-            <span>Data Pipeline Flow</span>
-          </h3>
+          <div className="dashboardSectionIntro">
+            <h3 className="withIcon">
+              <Icon name="account_tree" className="accentIcon" />
+              <span>Data Pipeline Flow</span>
+            </h3>
+            <p className="dashboardSectionMeta">Current ingestion stages from source fetch to vector storage.</p>
+          </div>
         </div>
         <div className="pipelineFlow">
           {pipelineSteps.map((step) => (
@@ -190,7 +202,7 @@ export default function SourcesDashboard({ onNavigate, onSelectSource, reloadTok
               <div className="pipelineNode">
                 <Icon name={step.icon} className={step.current ? "pulse" : ""} fill={step.current} />
               </div>
-              <span>{step.label}</span>
+              <span className="pipelineLabel">{step.label}</span>
             </div>
           ))}
         </div>

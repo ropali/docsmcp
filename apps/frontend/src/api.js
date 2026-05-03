@@ -46,6 +46,13 @@ export function createSource(payload) {
   });
 }
 
+export function updateSource(sourceId, payload) {
+  return request(`/api/v1/sources/${sourceId}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
 export function refreshSource(sourceId) {
   return request(`/api/v1/sources/${sourceId}/refresh`, {
     method: "POST",
